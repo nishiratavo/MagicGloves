@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+function DebugInterface()
+{
+	echo "Please chose the debug interface:"
+	echo "[0] ST-LINK/V2	[1] ST-LINK/V2-1"
+	read -p "Choice: " debug
+	
+	if [[ "$debug" == 0 ]]; then
+		PGFLAGS="-f interface/stlink-v2.cfg -f target/stm32f4x.cfg -c \"program \$(PRJ_NAME).elf verify reset\" -c shutdown"
+	elif [[ "$debug" == 1 ]]; then
+		PGFLAGS="-f interface/stlink-v2-1.cfg -f target/stm32f4x.cfg -c \"program \$(PRJ_NAME).elf verify reset\" -c shutdown"
+	fi
+
+	echo "PGFLAGS = $PGFLAGS" >> .prjconf.mk
+}
+
+function main()
+{
+	echo "CONF = true" > .prjconf.mk
+	echo "Project Configuration"
+	DebugInterface
+	echo "Configuration finished."
+}
+
+main

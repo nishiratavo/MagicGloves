@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+echo "Please chose the debug interface:"
+echo "[0] ST-LINK/V2	[1] ST-LINK/V2-1"
+read -p "Choice: " debug
+
+if [[ "$debug" == 0 ]]; then
+	INTERFACE="interface/stlink-v2.cfg"
+elif [[ "$debug" == 1 ]]; then
+	INTERFACE="interface/stlink-v2-1.cfg"
+fi
+
+setsid openocd -f "$INTERFACE" -f target/stm32f4x.cfg </dev/null &>/dev/null 2>&1 &
+sleep 0.1
+arm-none-eabi-gdb -tui *.elf -x gdbcmd
+pkill -SIGTERM openocd

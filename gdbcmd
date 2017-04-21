@@ -1,0 +1,47 @@
+target remote localhost:3333
+monitor reset halt
+set max-value-size 2000000
+
+python
+from cmdebug.svd_gdb import LoadSVD
+from cmdebug.dwt_gdb import DWT
+
+DWT()
+LoadSVD()
+from subprocess import call
+class fastd (gdb.Command):
+  """Compile and upload"""
+  def __init__ (self):
+    super (fastd, self).__init__ ("fastd", gdb.COMMAND_USER)
+  def invoke (self, args, from_tty):
+    call(["make", "debug"])
+    gdb.execute("load")
+    gdb.execute("tb main")
+    gdb.execute("c")
+fastd()
+
+class rst (gdb.Command):
+  """Reset the microcontroller"""
+  def __init__ (self):
+    super (rst, self).__init__ ("rst", gdb.COMMAND_USER)
+  def invoke (self, args, from_tty):
+    gdb.execute("monitor reset halt")
+    gdb.execute("tb main")
+    gdb.execute("c")
+rst()
+
+class cycs (gdb.Command):
+  """Count the number of cpu cycles until the next breakpoint"""
+  def __init__ (self):
+    super (cycs, self).__init__ ("cycs", gdb.COMMAND_USER)
+  def invoke (self, args, from_tty):
+    gdb.execute("set DWT->CYCCNT = 0")
+    gdb.execute("c")
+    gdb.write ("\n\nElapsed cyles:\n")
+    gdb.execute("p DWT->CYCCNT")
+    gdb.write ("\n(gdb) ")
+cycs()
+end
+
+svd_load /Users/gustavonishihara/Documents/gdb-py/STM32F407.svd
+
