@@ -8,7 +8,7 @@
 #define SQR1_RESET ((uint32_t)0xFF0FFFFF) 
 #define SMPR2_SMP3_RESET ((uint32_t)0xFFFFFFC7) 
 
-void clock_config() //              /to do -> add parameters for adc and gpio selection
+void ADCclock_config() //              /to do -> add parameters for adc and gpio selection
 {
 	RCC->APB2ENR |= RCC_APB2ENR_ADC1EN; // enables ADC1 clock
 	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN; // enables GPIOA which contains ADC1_channel 1
