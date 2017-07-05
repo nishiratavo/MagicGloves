@@ -8,7 +8,8 @@
 
 void ADCclock_config();
 void GPIOx_config();
-void adc_config();
+void adc_config_single();
+void adc_config_multi();
 uint16_t adc_value();
 
 

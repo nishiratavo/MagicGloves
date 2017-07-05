@@ -2,14 +2,20 @@
 #include "stm32f407xx.h"
 #include "adc.h"
 #include "UART.h"
+#include "DMA.h"
 			
 uint16_t result = 0;
 char data = 'b';
 char converted_data[4];
-uint16_t average_result = 0;
-uint16_t filtered_result = 0;
+uint32_t average_result = 0;
+uint32_t filtered_flex = 0;
+volatile uint16_t buffer[3400];
+volatile uint32_t flex_data[] = {0x0, 0x0, 0x0, 0x0};
+int count = 0;
+uint16_t flag = 0;
 
-void convert_data(uint16_t value)
+
+void convert_data(volatile uint32_t value)
 {
 	converted_data[0] = value/1000;
 	converted_data[1] = (value/100 - converted_data[0]*10);
@@ -22,9 +28,78 @@ void convert_data(uint16_t value)
 
 }
 
+/*void ADC_IRQHandler()
+{
+	ADC1->SR &= ~(ADC_SR_EOC);
+	count++;
+}*/
+
+void DMA2_Stream0_IRQHandler()
+{
+	if ( ( (DMA2 -> LISR)&(DMA_LISR_HTIF0) ) == DMA_LISR_HTIF0)
+	{
+		for (int i = 0; i < 1700; ++i)
+		{
+			if (i%4 == 0)
+			{
+				flex_data[0] += buffer[i];
+			}
+			else if ((i-1)%4 == 0)
+			{
+				flex_data[1] += buffer[i];
+			}
+			else if ((i-2)%4 == 0)
+			{
+				flex_data[2] += buffer[i];
+			}
+			/*else if ((i-3)%4 == 0)
+			{
+				flex_data[3] += buffer[i];
+			}*/
+		}
+
+		for (int i = 0; i < 3; ++i)
+		{
+			flex_data[i] = flex_data[i]/425;
+		}
+		flag = 1;
+		DMA2 -> LIFCR |= DMA_LIFCR_CHTIF0;
+	}
+
+	if (((DMA2 -> LISR)&(DMA_LISR_TCIF0)) == DMA_LISR_TCIF0 )
+	{
+		for (int i = 1700; i < 3400; ++i)
+		{
+			if (i%4 == 0)
+			{
+				flex_data[0] += buffer[i];
+			}
+			else if ((i-1)%4 == 0)
+			{
+				flex_data[1] += buffer[i];
+			}
+			else if ((i-2)%4 == 0)
+			{
+				flex_data[2] += buffer[i];
+			}
+			/*else if ((i-3)%4 == 0)
+			{
+				flex_data[3] += buffer[i];
+			}*/
+		}
+		for (int i = 0; i < 3; ++i)
+		{
+			flex_data[i] = flex_data[i]/425;
+		}
+		flag = 1;
+		//count++;
+		DMA2 -> LIFCR |= DMA_LIFCR_CTCIF0;
+	}
+}
 
 
 
+// ERROR : just the first conversion is in order after that it gets messy
 
 
 int main(void)
@@ -35,24 +110,56 @@ int main(void)
 	USART_config();
 	ADCclock_config();
 	GPIOx_config();
-	adc_config();
+	NVIC_SetPriority(DMA2_Stream0_IRQn, 1);
+	NVIC_EnableIRQ(DMA2_Stream0_IRQn);
+	DMA_config();
+	DMA2_Stream0 -> M0AR |= (uint32_t)buffer;
+	DMA_config2();
+	adc_config_multi();
+
+
 	for(;;)
 	{
-		for (int i = 0; i < 20; ++i)
+		
+		/*for (int i = 0; i < 20; ++i) // change this function it is faster than the ADC
 		{
 			result = adc_value();
 			average_result += result;
 		}
 		average_result  = average_result/20;
-		filtered_result = filtered_result*0.0001 + average_result;
-		convert_data(filtered_result);
-		send_data('b');
+		filtered_result = filtered_result*0.0001 + average_result;*/
+		// change this stuff to a function 
+		if (flag == 1)
+		{
+			filtered_flex = filtered_flex*0.0001 + flex_data[1];
+			flag = 0;
+		}
+		count++;
+		/*send_data('a');
 		send_data(' ');
+		convert_data(flex_data[0]);
 		send_data(converted_data[0]);
 		send_data(converted_data[1]);
 		send_data(converted_data[2]);
 		send_data(converted_data[3]);
+		send_data(' ');*/
+		send_data('b');
+		send_data(' ');
+		convert_data(filtered_flex);
+		send_data(converted_data[0]);
+		send_data(converted_data[1]);
+		send_data(converted_data[2]);
+		send_data(converted_data[3]);
+		/*send_data(' ');
+		send_data('c');
+		send_data(' ');
+		convert_data(flex_data[2]);
+		send_data(converted_data[0]);
+		send_data(converted_data[1]);
+		send_data(converted_data[2]);
+		send_data(converted_data[3]);*/
 		send_data('\n');
 		send_data('\r');
+		//-----------------------------
 	}
 }
