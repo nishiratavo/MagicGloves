@@ -3,7 +3,11 @@
 #include "adc.h"
 #include "UART.h"
 #include "DMA.h"
+#include "I2C.h"
 			
+
+#define LSM9DS1_AG_ADDR  0x6B
+
 uint16_t result = 0;
 char data = 'b';
 char converted_data[4];
@@ -13,6 +17,7 @@ volatile uint16_t buffer[3400];
 volatile uint32_t flex_data[] = {0x0, 0x0, 0x0, 0x0};
 int count = 0;
 uint16_t flag = 0;
+uint8_t I2C_test = 1;
 
 
 void convert_data(volatile uint32_t value)
@@ -105,22 +110,32 @@ void DMA2_Stream0_IRQHandler()
 int main(void)
 {
 	ClockConfig();
-	USARTclock_config();
-	GPIO_config();
-	USART_config();
-	ADCclock_config();
-	GPIOx_config();
-	NVIC_SetPriority(DMA2_Stream0_IRQn, 1);
-	NVIC_EnableIRQ(DMA2_Stream0_IRQn);
-	DMA_config();
-	DMA2_Stream0 -> M0AR |= (uint32_t)buffer;
-	DMA_config2();
-	adc_config_multi();
+	//USARTclock_config();
+	I2C_clock_init();
+	I2C_gpio_config();
+	I2C_config(I2C2);
+	//GPIO_config();
+	//USART_config();
+	//ADCclock_config();
+	//GPIOx_config();
+	//NVIC_SetPriority(DMA2_Stream0_IRQn, 1);
+	//NVIC_EnableIRQ(DMA2_Stream0_IRQn);
+	//DMA_config();
+	//DMA2_Stream0 -> M0AR |= (uint32_t)buffer;
+	//DMA_config2();
+	//adc_config_multi();
 
 
 	for(;;)
 	{
-		
+		I2C_Write(I2C2, LSM9DS1_AG_ADDR, 0x10, 0x2);
+		I2C_test = I2C_Read(I2C2, LSM9DS1_AG_ADDR, 0x10);
+		//I2C_Write(I2C2, LSM9DS1_AG_ADDR, 0x10, 0x2);
+		//I2C_test = I2C_Read(I2C2, LSM9DS1_AG_ADDR, 0x10);
+		/*I2C_start(I2C2, LSM9DS1_AG_ADDR<<1,'W','T');
+		I2C_write(0x0F);
+		I2C_start(I2C2, LSM9DS1_AG_ADDR<<1,'R','F');
+		I2C_test = I2C_read_nack();*/
 		/*for (int i = 0; i < 20; ++i) // change this function it is faster than the ADC
 		{
 			result = adc_value();
@@ -143,13 +158,13 @@ int main(void)
 		send_data(converted_data[2]);
 		send_data(converted_data[3]);
 		send_data(' ');*/
-		send_data('b');
-		send_data(' ');
-		convert_data(filtered_flex);
-		send_data(converted_data[0]);
-		send_data(converted_data[1]);
-		send_data(converted_data[2]);
-		send_data(converted_data[3]);
+		//send_data('b');
+		//send_data(' ');
+		//convert_data(filtered_flex);
+		//send_data(converted_data[0]);
+		//send_data(converted_data[1]);
+		//send_data(converted_data[2]);
+		//send_data(converted_data[3]);
 		/*send_data(' ');
 		send_data('c');
 		send_data(' ');
@@ -158,8 +173,8 @@ int main(void)
 		send_data(converted_data[1]);
 		send_data(converted_data[2]);
 		send_data(converted_data[3]);*/
-		send_data('\n');
-		send_data('\r');
+		//send_data('\n');
+		//send_data('\r');
 		//-----------------------------
 	}
 }
