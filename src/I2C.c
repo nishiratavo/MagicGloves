@@ -9,6 +9,7 @@
 #define MASTER_BYTE_RECEIVED ((uint32_t)0x00030040)
 
 // TO DO : change while content for I2C_check_event function | need to add read and write of more than one byte
+// use enum for configurations
 
 void I2C_clock_init()
 {
@@ -38,15 +39,15 @@ void I2C_acknowledge(char config) // 'E' for enable 'D' for disable
 	}
 	else if (config == 'D')
 	{
-		I2C2->CR1 &= !(I2C_CR1_ACK);
+		I2C2->CR1 &= ~(I2C_CR1_ACK);
 	}
 }
 
 uint8_t I2C_check_event(uint32_t event)
 {
-	uint32_t flag = 0;
-	uint32_t sr1 = 0;
-	uint32_t sr2 = 0;
+	volatile uint32_t flag = 0;
+	volatile uint32_t sr1 = 0;
+	volatile uint32_t sr2 = 0;
 
 	sr1 = I2C2->SR1; 
 	sr2 = I2C2->SR2;
@@ -63,8 +64,10 @@ uint8_t I2C_check_event(uint32_t event)
 	}
 }
 
-
-void I2C_busy_errata() // change for all I2Cs
+//it seems that the slave device interfere with the SDA line, 
+// making the 11th bit in IDR to not go high, leaving the code in a while loop
+// need to find a solution
+void I2C_busy_errata() // change for all I2Cs.   
 {
 	I2C2->CR1 &= ~(I2C_CR1_PE);
 	GPIOB->MODER &= ~(GPIO_MODER_MODER11); // reset mode
@@ -191,13 +194,10 @@ void I2C_stop()
 
 uint8_t I2C_Read(I2C_TypeDef* I2Cx, uint8_t SAD, uint8_t RAD)
 {
-	uint8_t data = 0;
 	I2C_start(I2Cx, SAD<<1,'W','T');
 	I2C_write(RAD);
 	I2C_start(I2Cx, SAD<<1,'R','F');
-	data = I2C_read_nack();
-	I2C_config(I2C2);
-	return data;
+	return I2C_read_nack();
 
 	
 }
