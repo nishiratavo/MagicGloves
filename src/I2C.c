@@ -10,6 +10,7 @@
 
 // TO DO : change while content for I2C_check_event function | need to add read and write of more than one byte
 // use enum for configurations
+// change all functions to I2C_TypeDef
 
 void I2C_clock_init()
 {
@@ -198,8 +199,37 @@ uint8_t I2C_Read(I2C_TypeDef* I2Cx, uint8_t SAD, uint8_t RAD)
 	I2C_write(RAD);
 	I2C_start(I2Cx, SAD<<1,'R','F');
 	return I2C_read_nack();
+}
 
-	
+void I2C_Read_Many(I2C_TypeDef* I2Cx, uint8_t SAD, uint8_t RAD, uint8_t *data, uint8_t count)
+{
+	I2C_start(I2Cx, SAD<<1,'W','T');
+	I2C_write(RAD);
+	I2C_start(I2Cx, SAD<<1,'R','F');
+	for (uint8_t i = 0; i < count; ++i)
+	{
+		if (i == count - 3)
+		{
+			while(!I2C_check_event(1<<2));
+			I2C_acknowledge('D');
+			data[i] = (uint8_t)I2Cx->DR;
+		}
+		else if (i == count - 2)
+		{
+			while(!I2C_check_event(1<<2));
+			I2C_stop();
+			data[i] = (uint8_t)I2Cx->DR;
+		}
+		else if (i == count - 1)
+		{
+			while(!I2C_check_event(MASTER_BYTE_RECEIVED));
+			data[i] = (uint8_t)I2C2->DR;
+		}
+		else
+		{
+			data[i] = I2C_read_ack();
+		}
+	}
 }
 
 void I2C_Write(I2C_TypeDef* I2Cx, uint8_t SAD, uint8_t RAD, uint8_t data)
