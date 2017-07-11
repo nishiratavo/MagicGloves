@@ -13,6 +13,7 @@ uint8_t I2C_read_ack();
 uint8_t I2C_read_nack();
 void I2C_stop();
 uint8_t I2C_Read(I2C_TypeDef* I2Cx, uint8_t SAD, uint8_t RAD);
+void I2C_Read_Many(I2C_TypeDef* I2Cx, uint8_t SAD, uint8_t RAD, uint8_t *data, uint8_t count);
 void I2C_Write(I2C_TypeDef* I2Cx, uint8_t SAD, uint8_t RAD, uint8_t data);
 
 
