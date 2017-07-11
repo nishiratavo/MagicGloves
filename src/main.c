@@ -4,6 +4,7 @@
 #include "UART.h"
 #include "DMA.h"
 #include "I2C.h"
+#include "LSM9DS1.h"
 			
 
 #define LSM9DS1_AG_ADDR  0x6B
@@ -17,10 +18,12 @@ volatile uint16_t buffer[3400];
 volatile uint32_t flex_data[] = {0x0, 0x0, 0x0, 0x0};
 int count = 0;
 uint16_t flag = 0;
-uint8_t I2C_test = 1;
+uint8_t I2C_test = 0;
+uint16_t accel_data[] = {0x0, 0x0, 0x0};
+uint8_t accel_test = 0;
 
 
-void convert_data(volatile uint32_t value)
+void convert_data(volatile uint32_t value) // put in UART.c and change for general case
 {
 	converted_data[0] = value/1000;
 	converted_data[1] = (value/100 - converted_data[0]*10);
@@ -114,6 +117,7 @@ int main(void)
 	I2C_clock_init();
 	I2C_gpio_config();
 	I2C_config(I2C2);
+	LSM9DS1_init();
 	//GPIO_config();
 	//USART_config();
 	//ADCclock_config();
@@ -128,21 +132,14 @@ int main(void)
 
 	for(;;)
 	{
-		I2C_Write(I2C2, LSM9DS1_AG_ADDR, 0x10, 0x2);
-		I2C_test = I2C_Read(I2C2, LSM9DS1_AG_ADDR, 0x10);
-		//I2C_Write(I2C2, LSM9DS1_AG_ADDR, 0x10, 0x2);
-		//I2C_test = I2C_Read(I2C2, LSM9DS1_AG_ADDR, 0x10);
-		/*I2C_start(I2C2, LSM9DS1_AG_ADDR<<1,'W','T');
-		I2C_write(0x0F);
-		I2C_start(I2C2, LSM9DS1_AG_ADDR<<1,'R','F');
-		I2C_test = I2C_read_nack();*/
-		/*for (int i = 0; i < 20; ++i) // change this function it is faster than the ADC
+
+		I2C_test = I2C_Read(I2C2, LSM9DS1_AG_ADDR, 0x20);
+		//accel_test = I2C_Read(I2C2, LSM9DS1_AG_ADDR, 0x27);
+		if (accel_available())
 		{
-			result = adc_value();
-			average_result += result;
+			count++;
+			accel_read(accel_data);
 		}
-		average_result  = average_result/20;
-		filtered_result = filtered_result*0.0001 + average_result;*/
 		// change this stuff to a function 
 		if (flag == 1)
 		{
@@ -150,31 +147,31 @@ int main(void)
 			flag = 0;
 		}
 		count++;
-		/*send_data('a');
+		/*send_data('x');
 		send_data(' ');
-		convert_data(flex_data[0]);
+		convert_data(accel_data[0]);
 		send_data(converted_data[0]);
 		send_data(converted_data[1]);
 		send_data(converted_data[2]);
 		send_data(converted_data[3]);
-		send_data(' ');*/
-		//send_data('b');
-		//send_data(' ');
-		//convert_data(filtered_flex);
-		//send_data(converted_data[0]);
-		//send_data(converted_data[1]);
-		//send_data(converted_data[2]);
-		//send_data(converted_data[3]);
-		/*send_data(' ');
-		send_data('c');
 		send_data(' ');
-		convert_data(flex_data[2]);
+		send_data('y');
+		send_data(' ');
+		convert_data(accel_data[1]);
 		send_data(converted_data[0]);
 		send_data(converted_data[1]);
 		send_data(converted_data[2]);
-		send_data(converted_data[3]);*/
-		//send_data('\n');
-		//send_data('\r');
+		send_data(converted_data[3]);
+		send_data(' ');
+		send_data('z');
+		send_data(' ');
+		convert_data(accel_data[2]);
+		send_data(converted_data[0]);
+		send_data(converted_data[1]);
+		send_data(converted_data[2]);
+		send_data(converted_data[3]);
+		send_data('\n');
+		send_data('\r');*/
 		//-----------------------------
 	}
 }
