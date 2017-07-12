@@ -38,3 +38,45 @@ void send_data(char data)
 	while(!((USART3->SR & USART_SR_TXE) ==  USART_SR_TXE));
 	USART3->DR = data;
 }
+
+
+
+void convert_data(char *converted_data, volatile int32_t value) // change for general case
+{
+	if (value < 0)
+	{
+		converted_data[0] = 45;
+		converted_data[1] = - value/10000;
+		converted_data[2] =  (- value/1000 - (converted_data[1]*10));
+		converted_data[3] =  (- value/100 - (converted_data[1]*100) - (converted_data[2]*10));
+		converted_data[4] =  (- value/10 - (converted_data[1]*1000) - (converted_data[2]*100) - (converted_data[3]*10));
+		converted_data[5] =  (- value - (converted_data[1]*10000) - (converted_data[2]*1000) - (converted_data[3]*100) - (converted_data[4]*10));
+	}
+	else
+	{
+		converted_data[0] = 43;
+		converted_data[1] = value/10000;
+		converted_data[2] = value/1000 - (converted_data[1]*10);
+		converted_data[3] = (value/100 - (converted_data[1]*100) - (converted_data[2]*10));
+		converted_data[4] = (value/10 - (converted_data[1]*1000) - (converted_data[2]*100) - (converted_data[3]*10));
+		converted_data[5] = (value - (converted_data[1]*10000) - (converted_data[2]*1000) - (converted_data[3]*100) - (converted_data[4]*10));
+	}	
+	for (int i = 1; i < 6; ++i)
+	{
+		converted_data[i] += 48;
+	}
+}
+
+void print_data(volatile int32_t data)
+{
+	char converted_data[6];
+	convert_data(converted_data, data);
+	send_data(converted_data[0]);
+	send_data(converted_data[1]);
+	send_data(converted_data[2]);
+	send_data(converted_data[3]);
+	send_data(converted_data[4]);
+	send_data(converted_data[5]);
+
+}
+
