@@ -11,7 +11,6 @@
 
 uint16_t result = 0;
 char data = 'b';
-char converted_data[4];
 uint32_t average_result = 0;
 uint32_t filtered_flex = 0;
 volatile uint16_t buffer[3400];
@@ -19,11 +18,11 @@ volatile uint32_t flex_data[] = {0x0, 0x0, 0x0, 0x0};
 int count = 0;
 uint16_t flag = 0;
 uint8_t I2C_test = 0;
-uint16_t accel_data[] = {0x0, 0x0, 0x0};
+int16_t accel_data[] = {0x0, 0x0, 0x0};
 uint8_t accel_test = 0;
 
 
-void convert_data(volatile uint32_t value) // put in UART.c and change for general case
+/*void convert_data(char *converted_data, volatile uint32_t value) // put in UART.c and change for general case
 {
 	converted_data[0] = value/1000;
 	converted_data[1] = (value/100 - converted_data[0]*10);
@@ -34,7 +33,7 @@ void convert_data(volatile uint32_t value) // put in UART.c and change for gener
 		converted_data[i] += 48;
 	}
 
-}
+}*/
 
 /*void ADC_IRQHandler()
 {
@@ -113,13 +112,13 @@ void DMA2_Stream0_IRQHandler()
 int main(void)
 {
 	ClockConfig();
-	//USARTclock_config();
+	USARTclock_config();
 	I2C_clock_init();
 	I2C_gpio_config();
 	I2C_config(I2C2);
 	LSM9DS1_init();
-	//GPIO_config();
-	//USART_config();
+	GPIO_config();
+	USART_config();
 	//ADCclock_config();
 	//GPIOx_config();
 	//NVIC_SetPriority(DMA2_Stream0_IRQn, 1);
@@ -147,31 +146,19 @@ int main(void)
 			flag = 0;
 		}
 		count++;
-		/*send_data('x');
+		send_data('x');
 		send_data(' ');
-		convert_data(accel_data[0]);
-		send_data(converted_data[0]);
-		send_data(converted_data[1]);
-		send_data(converted_data[2]);
-		send_data(converted_data[3]);
+		print_data((int32_t)accel_data[0]);
 		send_data(' ');
 		send_data('y');
 		send_data(' ');
-		convert_data(accel_data[1]);
-		send_data(converted_data[0]);
-		send_data(converted_data[1]);
-		send_data(converted_data[2]);
-		send_data(converted_data[3]);
+		print_data((int32_t)accel_data[1]);
 		send_data(' ');
 		send_data('z');
 		send_data(' ');
-		convert_data(accel_data[2]);
-		send_data(converted_data[0]);
-		send_data(converted_data[1]);
-		send_data(converted_data[2]);
-		send_data(converted_data[3]);
+		print_data((int32_t)accel_data[2]);
 		send_data('\n');
-		send_data('\r');*/
+		send_data('\r');
 		//-----------------------------
 	}
 }

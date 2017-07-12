@@ -4,13 +4,14 @@
 #include "I2C.h"
 
 #define LSM9DS1_AG_ADDR  0x6B
-
+#define LSM9DS1_M_ADDR  0x1E
+#define SENSITIVITY_ACCELEROMETER_2  0.000061
 
 void LSM9DS1_init()
 {
 	accel_init(6,0);
-	initGyro();
-	initMag();
+	gyro_init(6,0);
+	mag_init(7);
 }
 
 
@@ -31,23 +32,69 @@ uint8_t accel_available()
 	return (status & (1<<0));
 }
 
-void accel_read(uint16_t *accel_data)
+void accel_read(int16_t *accel_data)
 {
 	uint8_t data[6];
 	I2C_Read_Many(I2C2, LSM9DS1_AG_ADDR , OUT_X_L_XL|0x80, data, 6);
 	accel_data[0] = (data[1]<<8) | data[0];
 	accel_data[1] = (data[3]<<8) | data[2];
 	accel_data[2] = (data[5]<<8) | data[4];
-
 }
 
-void initGyro()
+
+
+void gyro_init(uint8_t ODR, uint8_t bandwidth)
 {
-	
+	uint8_t tempreg = 0;
+	tempreg |= (ODR & 0x7)<<5; // ODR = sample rate 6 different values, see Table 46 pg.45
+	tempreg |= (bandwidth & 0x3); // 4 different values table 47 pg.46
+	I2C_Write(I2C2, LSM9DS1_AG_ADDR, CTRL_REG1_G, tempreg); // write tempreg to CTRL_REG1_G
+
 }
 
-
-void initMag()
+uint8_t gyro_available()
 {
-	
+	uint8_t status = I2C_Read(I2C2, LSM9DS1_AG_ADDR, STATUS_REG_1);
+	return ((status & (1<<1)) >> 1);
 }
+
+void gyro_read(int16_t *gyro_data)
+{
+	uint8_t data[6];
+	I2C_Read_Many(I2C2, LSM9DS1_AG_ADDR , OUT_X_L_G|0x80, data, 6);
+	gyro_data[0] = (data[1]<<8) | data[0];
+	gyro_data[1] = (data[3]<<8) | data[2];
+	gyro_data[2] = (data[5]<<8) | data[4];
+}
+
+void mag_init(uint8_t ODR)
+{
+	uint8_t tempreg = 0;
+	tempreg |= (3<<5); // 4 levels of performance
+	tempreg |= (ODR & 0x7)<<2; // 7 different sample rates values, see Table 111 pg.63
+	I2C_Write(I2C2, LSM9DS1_M_ADDR, CTRL_REG1_M, tempreg);
+
+	tempreg = 0;
+	I2C_Write(I2C2, LSM9DS1_M_ADDR, CTRL_REG3_M, tempreg);
+
+	tempreg = 0;
+	tempreg |= 3<<2;
+	I2C_Write(I2C2, LSM9DS1_M_ADDR, CTRL_REG4_M, tempreg);
+
+}
+
+uint8_t mag_available()
+{
+	uint8_t status = I2C_Read(I2C2, LSM9DS1_M_ADDR, STATUS_REG_M);
+	return ((status & (1<<3)) >> 3);
+}
+
+void mag_read(int16_t *mag_data)
+{
+	uint8_t data[6];
+	I2C_Read_Many(I2C2, LSM9DS1_M_ADDR, OUT_X_L_M|0x80, data, 6);
+	mag_data[0] = (data[1]<<8) | data[0];
+	mag_data[1] = (data[3]<<8) | data[2];
+	mag_data[2] = (data[5]<<8) | data[4];
+}
+
