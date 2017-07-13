@@ -79,21 +79,21 @@ void adc_config_multi() //       /to do -> add parameters for types of configura
 	//ADC1->SQR1 |= 0x0;
 	//ADC1->CR2 |= ADC_CR2_ADON; // activate ADC
 
-	// sampling time configuration (000) -> 3 cycles see page 425 manual / to do -> change for mask
+	// sampling time configuration (000) -> 3 cycles see page 423 manual / to do -> change for mask
 	ADC1->SMPR2 &= SMPR2_SMP3_RESET;
 	// 480 cycles CH1
 	ADC1->SMPR2 |= 0<<3; 
-	ADC1->SMPR2 |= 1<<4;
-	ADC1->SMPR2 |= 1<<5;
+	ADC1->SMPR2 |= 0<<4;
+	ADC1->SMPR2 |= 0<<5;
 
 	// 480 cycles CH2
 	ADC1->SMPR2 |= 0<<6; 
-	ADC1->SMPR2 |= 1<<7;
-	ADC1->SMPR2 |= 1<<8;
+	ADC1->SMPR2 |= 0<<7;
+	ADC1->SMPR2 |= 0<<8;
 	// 480 cycles CH3
 	ADC1->SMPR2 |= 0<<9; 
-	ADC1->SMPR2 |= 1<<10;
-	ADC1->SMPR2 |= 1<<11;
+	ADC1->SMPR2 |= 0<<10;
+	ADC1->SMPR2 |= 0<<11;
 
 	ADC1->SQR3 |= 1<<0; //sets order of conversion  / to do -> change for mask
 	ADC1 -> SQR3 |= 1<<6; // CH2 second conversion
