@@ -16,7 +16,7 @@ void DMA_config()
 	DMA_clock();
 	DMA2_Stream0 -> CR &= ~(DMA_SxCR_EN); // needs to be 0 to set register CR
 	DMA2_Stream0 -> CR &= ~(DMA_SxCR_CHSEL); //channel 0
-	DMA2_Stream0 -> NDTR |= 0x3400; //(DMA_SxNDT_1 | DMA_SxNDT_0); // buffer size 
+	DMA2_Stream0 -> NDTR |= 0x8; //(DMA_SxNDT_1 | DMA_SxNDT_0); // buffer size 
 	DMA2_Stream0 -> CR &= ~(DMA_SxCR_DIR); // peripheral to memory 
 	DMA2_Stream0 -> FCR |= DMA_SxFCR_DMDIS; // FIFO disable    // certo
 	DMA2_Stream0 -> FCR &= ~(DMA_SxFCR_FTH);
@@ -34,7 +34,7 @@ void DMA_config2()
 	DMA2_Stream0 -> PAR |= (uint32_t)&ADC1->DR; 
 	DMA2_Stream0 -> CR |= DMA_SxCR_PSIZE_0; // peripheral size 16 bits. // certo
 	DMA2_Stream0 -> CR &= ~(DMA_SxCR_PINC); // don't increment base address // certo
-	DMA2_Stream0 -> CR |= DMA_SxCR_HTIE; // half transfer interrupt enable
+	//DMA2_Stream0 -> CR |= DMA_SxCR_HTIE; // half transfer interrupt enable
 	DMA2_Stream0 -> CR |= DMA_SxCR_TCIE; // transfer complete interrupt enable
 	DMA2_Stream0 -> CR |= DMA_SxCR_EN; // enable DMA. // certo
 }

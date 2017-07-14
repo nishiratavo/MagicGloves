@@ -32,6 +32,19 @@ void GPIOx_config() //       /to do -> add parameters for which gpio to config a
 	GPIOA->MODER |= GPIO_MODER_MODER3;
 	GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPDR3);
 
+	GPIOA->MODER |= GPIO_MODER_MODER4;
+	GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPDR4);
+
+	GPIOA->MODER |= GPIO_MODER_MODER5;
+	GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPDR5);
+
+	GPIOA->MODER |= GPIO_MODER_MODER6;
+	GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPDR6);
+
+	GPIOA->MODER |= GPIO_MODER_MODER7;
+	GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPDR7);
+
+
 }
 
 void adc_config_single() //       /to do -> add parameters for types of configuration -> clear the registers before writing stuff
@@ -75,42 +88,71 @@ void adc_config_multi() //       /to do -> add parameters for types of configura
 	ADC1->CR2 |= 0<<28;
 	ADC1->CR2 |= 0<<29;
 
-	ADC1->SQR1 |= (ADC_SQR1_L_1| ADC_SQR1_L_0); // set number of conversions to 1(0000)
-	//ADC1->SQR1 |= 0x0;
-	//ADC1->CR2 |= ADC_CR2_ADON; // activate ADC
+	ADC1->SQR1 |= (ADC_SQR1_L_2|ADC_SQR1_L_1| ADC_SQR1_L_0); // set number of conversions to 7
 
-	// sampling time configuration (000) -> 3 cycles see page 423 manual / to do -> change for mask
+	// sampling time configuration (000) -> 3 cycles see page 423 manual 
 	ADC1->SMPR2 &= SMPR2_SMP3_RESET;
+
+	//----------Sample Time-----------------
 	// 480 cycles CH1
-	ADC1->SMPR2 |= 0<<3; 
-	ADC1->SMPR2 |= 0<<4;
-	ADC1->SMPR2 |= 0<<5;
+	ADC1->SMPR2 |= ADC_SMPR2_SMP1;
 
 	// 480 cycles CH2
-	ADC1->SMPR2 |= 0<<6; 
-	ADC1->SMPR2 |= 0<<7;
-	ADC1->SMPR2 |= 0<<8;
+	ADC1->SMPR2 |= ADC_SMPR2_SMP2;
+	
 	// 480 cycles CH3
-	ADC1->SMPR2 |= 0<<9; 
-	ADC1->SMPR2 |= 0<<10;
-	ADC1->SMPR2 |= 0<<11;
+	ADC1->SMPR2 |= ADC_SMPR2_SMP3;
 
-	ADC1->SQR3 |= 1<<0; //sets order of conversion  / to do -> change for mask
-	ADC1 -> SQR3 |= 1<<6; // CH2 second conversion
-	ADC1 -> SQR3 |= 1<<10; // CH3 third conversion
-	ADC1 -> SQR3 |= 1<<11; // CH3 third conversion
+	// 480 cycles CH4
+	ADC1->SMPR2 |= ADC_SMPR2_SMP4;
 
-	ADC1->CR2 |= ADC_CR1_EOCIE; // enables interrupt for EOC
-	//ADC1->CR2 |= ADC_CR2_EOCS; //end of conversion flag
-	ADC1->CR2 |= ADC_CR2_CONT; // continuous conversion mode 
+	//480 cycles CH5
+	ADC1->SMPR2 |= ADC_SMPR2_SMP5;
+
+	//480 cycles CH6
+	ADC1->SMPR2 |= ADC_SMPR2_SMP6;
+
+	//480 cycles CH7
+	ADC1->SMPR2 |= ADC_SMPR2_SMP7;
+
+	//----------Conversion Order----------------------------
+
+	//CH1 first conversion
+	ADC1->SQR3 |= ADC_SQR3_SQ1_0;
+
+	//CH2 second conversion
+	ADC1->SQR3 |= ADC_SQR3_SQ2_1;
+
+	//CH3 third conversion
+	ADC1->SQR3 |= (ADC_SQR3_SQ3_1|ADC_SQR3_SQ3_0);
+
+	// CH4 fourth conversion
+	ADC1->SQR3 |= ADC_SQR3_SQ4_2;
+
+	// CH5 fifth conversion
+	ADC1->SQR3 |= (ADC_SQR3_SQ5_2|ADC_SQR3_SQ5_0);
+
+	// CH6 sixth conversion
+	ADC1->SQR3 |= (ADC_SQR3_SQ6_2|ADC_SQR3_SQ6_1);
+
+	//CH7 seventh conversion
+	ADC1->SQR2 |= (ADC_SQR2_SQ7_2|ADC_SQR2_SQ7_1|ADC_SQR2_SQ7_0);
+	 //------------------------------------------------------
+
+
+
+	//ADC1->CR1 |= ADC_CR1_EOCIE; // enables interrupt for EOC
+	ADC1->CR1 |= ADC_CR1_OVRIE; // enables OVR interrupt
+	ADC1->CR2 |= ADC_CR2_EOCS; //end of conversion flag
+	ADC1->CR2 &= ~(ADC_CR2_CONT); // continuous conversion mode 
 	//ADC1->CR2 |= ADC_CR2_SWSTART; // initiates regular group conversion
 
-	ADC1->CR2 |= ADC_CR2_DDS; // activate DMA request while there is data
+	ADC1->CR2 &= ~(ADC_CR2_DDS); // activate DMA request while there is data
 	//ADC1 -> CR2 |= ADC_CR2_DMA; // enables DMA
 
 	ADC1->CR2 |= ADC_CR2_ADON; // activate ADC
 	ADC1->CR2 |= ADC_CR2_DMA; // enables DMA
-	ADC1->CR2 |= ADC_CR2_SWSTART; // initiates regular group conversion
+	//ADC1->CR2 |= ADC_CR2_SWSTART; // initiates regular group conversion
 }
 
 

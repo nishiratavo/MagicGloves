@@ -54,7 +54,7 @@ void convert_data(char *converted_data, volatile int32_t value) // change for ge
 	}
 	else
 	{
-		converted_data[0] = 43;
+		converted_data[0] = 48;
 		converted_data[1] = value/10000;
 		converted_data[2] = value/1000 - (converted_data[1]*10);
 		converted_data[3] = (value/100 - (converted_data[1]*100) - (converted_data[2]*10));
