@@ -12,8 +12,8 @@ int8_t adc_counter = 0;
 uint16_t result = 0;
 char data = 'b';
 uint32_t average_result = 0;
-volatile int32_t filtered_flex = 0;
-volatile int32_t output_data = 0;
+volatile int32_t filtered_flex[] = {0x0, 0x0};
+volatile int32_t output_data[] = {0x0, 0x0};
 volatile int16_t buffer[8];
 volatile int32_t flex_data[] = {0x0, 0x0, 0x0, 0x0};
 volatile int count = 0;
@@ -26,76 +26,12 @@ volatile uint8_t systick_flag = 0;
 
 
 
-/*void ADC_IRQHandler()
-{
-	ADC1->SR &= ~(ADC_SR_EOC);
-	count++;
-}*/
-
 void DMA2_Stream0_IRQHandler()
 {
-	//dummy++;
-	/*if ( ( (DMA2 -> LISR)&(DMA_LISR_HTIF0) ) == DMA_LISR_HTIF0)
-	{
-		//DWT->CYCCNT = 0;
-		for (int i = 0; i < 1700; ++i)
-		{
-			if (i%4 == 0)
-			{
-				//flex_data[0] += buffer[i];
-			}
-			else if ((i-1)%4 == 0)
-			{
-				flex_data[1] += buffer[i];
-			}
-			else if ((i-2)%4 == 0)
-			{
-				//flex_data[2] += buffer[i];
-			}
-			else if ((i-3)%4 == 0)
-			{
-				flex_data[3] += buffer[i];
-			}
-		}
-
-		for (int i = 0; i < 3; ++i)
-		{
-			flex_data[i] = flex_data[i]/425;
-		}
-		flag = 1;
-		DMA2 -> LIFCR |= DMA_LIFCR_CHTIF0;
-	}*/
-
 	if (((DMA2 -> LISR)&(DMA_LISR_TCIF0)) == DMA_LISR_TCIF0 )
 	{
-		//ADC1->CR2 &= ~(ADC_CR2_ADON);
-		/*for (int i = 1700; i < 3400; ++i)
-		{
-			if (i%4 == 0)
-			{
-				flex_data[0] += buffer[i];
-			}
-			else if ((i-1)%4 == 0)
-			{
-				flex_data[1] += buffer[i];
-			}
-			else if ((i-2)%4 == 0)
-			{
-				flex_data[2] += buffer[i];
-			}
-			else if ((i-3)%4 == 0)
-			{
-				flex_data[3] += buffer[i];
-			}
-		}*/
-			//flex_data[i] = flex_data[i]/425;
-		//filtered_flex = filtered_flex + ((buffer[1] - filtered_flex)>>4);
-		//output_data = output_data + ((filtered_flex - output_data)>>4);
-		
-		flag = 1;
 		systick_flag = 0;
-		DMA2 -> LIFCR |= DMA_LIFCR_CTCIF0;
-		
+		DMA2 -> LIFCR |= DMA_LIFCR_CTCIF0;	
 	}
 }
 
@@ -142,10 +78,10 @@ int main(void)
 	(void)SysTick_Config(0x19A280);
 	ClockConfig();
 	USARTclock_config();
-	//I2C_clock_init();
-	//I2C_gpio_config();
-	//I2C_config(I2C2);
-	//LSM9DS1_init();
+	I2C_clock_init();
+	I2C_gpio_config();
+	I2C_config(I2C2);
+	LSM9DS1_init();
 	GPIO_config();
 	USART_config();
 	NVIC_SetPriority(ADC_IRQn, 1);
@@ -166,19 +102,17 @@ int main(void)
 		//dummy = DWT->CYCCNT;
 		//I2C_test = I2C_Read(I2C2, LSM9DS1_AG_ADDR, 0x20);
 		//accel_test = I2C_Read(I2C2, LSM9DS1_AG_ADDR, 0x27);
-		//DWT->CYCCNT = 0;
-		//if (accel_available())
-		//{
-			//count++;
-			//accel_read(accel_data);
-		//}
+		if (accel_available())
+		{
+			count++;
+			accel_read(accel_data);
+		}
 		// change this stuff to a function 
-			//flex_data[1] = adc_value();
-			//filtered_flex = filtered_flex*0.0001 + flex_data[1];
-			filtered_flex = filtered_flex + ((buffer[0] - filtered_flex)>>4);
-			output_data = output_data + ((filtered_flex - output_data)>>4);
-			//flag = 0;
-		
+		filtered_flex[0] = filtered_flex[0] + ((buffer[0] - filtered_flex[0])>>4);
+		output_data[0] = output_data[0] + ((filtered_flex[0] - output_data[0])>>4);
+
+		filtered_flex[1] = filtered_flex[1] + ((buffer[1] - filtered_flex[1])>>4);
+		output_data[1] = output_data[1] + ((filtered_flex[1] - output_data[1])>>4);
 		//DWT->CYCCNT = 0;
 		/*send_data('x');
 		send_data(' ');
@@ -194,11 +128,12 @@ int main(void)
 		send_data(' ');*/
 		send_data('r');
 		send_data(' ');
-		print_data(output_data);
+		print_data(output_data[0]);
+		send_data('\n');
+		send_data('\r');
+		send_data('s');
 		send_data(' ');
-		send_data('o');
-		send_data(' ');
-		print_data(dummy);
+		print_data(output_data[1]);
 		send_data('\n');
 		send_data('\r');
 		count++;
