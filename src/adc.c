@@ -17,10 +17,18 @@ void ADCclock_config() //              /to do -> add parameters for adc and gpio
 {
 	RCC->APB2ENR |= RCC_APB2ENR_ADC1EN; // enables ADC1 clock
 	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOAEN; // enables GPIOA which contains ADC1_channel 1
+	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN;
 }
 
 void GPIOx_config() //       /to do -> add parameters for which gpio to config and types of configuration
 {
+
+	GPIOB->MODER |= GPIO_MODER_MODER0; 
+	GPIOB->PUPDR &= ~(GPIO_PUPDR_PUPDR0);
+
+	GPIOA->MODER |= GPIO_MODER_MODER0; 
+	GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPDR0);
+
 	//ADC1_CH1 -> PA1
 	//to select the gpio parameters(input,output,pull-up,analog...) 4 registers must be configured
 	GPIOA->MODER |= 0xC; //MODERx[1,0] = 11 for analog in pin x /see GPIO_MODER page 283 manual / to do -> change for mask
@@ -88,55 +96,69 @@ void adc_config_multi() //       /to do -> add parameters for types of configura
 	ADC1->CR2 |= 0<<28;
 	ADC1->CR2 |= 0<<29;
 
-	ADC1->SQR1 |= (ADC_SQR1_L_2|ADC_SQR1_L_1| ADC_SQR1_L_0); // set number of conversions to 7
+	ADC1->SQR1 |= ADC_SQR1_L_3;//(ADC_SQR1_L_2|ADC_SQR1_L_1| ADC_SQR1_L_0); // set number of conversions to 8 (ADC_SQR1_L_3| ADC_SQR1_L_0);
 
 	// sampling time configuration (000) -> 3 cycles see page 423 manual 
 	ADC1->SMPR2 &= SMPR2_SMP3_RESET;
 
 	//----------Sample Time-----------------
-	// 480 cycles CH1
-	ADC1->SMPR2 |= ADC_SMPR2_SMP1;
+	// 15 cycles CH0
+	ADC1->SMPR2 |= ADC_SMPR2_SMP0_0;
 
-	// 480 cycles CH2
-	ADC1->SMPR2 |= ADC_SMPR2_SMP2;
+	// 15 cycles CH1
+	ADC1->SMPR2 |= ADC_SMPR2_SMP1_0;
+
+	// 15 cycles CH2
+	ADC1->SMPR2 |= ADC_SMPR2_SMP2_0;
 	
-	// 480 cycles CH3
-	ADC1->SMPR2 |= ADC_SMPR2_SMP3;
+	// 15 cycles CH3
+	ADC1->SMPR2 |= ADC_SMPR2_SMP3_0;
 
-	// 480 cycles CH4
-	ADC1->SMPR2 |= ADC_SMPR2_SMP4;
+	// 15 cycles CH4
+	ADC1->SMPR2 |= ADC_SMPR2_SMP4_0;
 
-	//480 cycles CH5
-	ADC1->SMPR2 |= ADC_SMPR2_SMP5;
+	//15 cycles CH5
+	ADC1->SMPR2 |= ADC_SMPR2_SMP5_0;
 
-	//480 cycles CH6
-	ADC1->SMPR2 |= ADC_SMPR2_SMP6;
+	//15 cycles CH6
+	ADC1->SMPR2 |= ADC_SMPR2_SMP6_0;
 
-	//480 cycles CH7
-	ADC1->SMPR2 |= ADC_SMPR2_SMP7;
+	//15 cycles CH7
+	ADC1->SMPR2 |= ADC_SMPR2_SMP7_0;
+
+	// 15 cycles CH8
+	ADC1->SMPR2 |= ADC_SMPR2_SMP8_0;
 
 	//----------Conversion Order----------------------------
 
-	//CH1 first conversion
-	ADC1->SQR3 |= ADC_SQR3_SQ1_0;
+	//CH0 first conversion
+	ADC1->SQR3 &= ~(ADC_SQR3_SQ1);
 
-	//CH2 second conversion
-	ADC1->SQR3 |= ADC_SQR3_SQ2_1;
+	//CH1 second conversion
+	ADC1->SQR3 |= ADC_SQR3_SQ2_0;
 
-	//CH3 third conversion
-	ADC1->SQR3 |= (ADC_SQR3_SQ3_1|ADC_SQR3_SQ3_0);
+	//CH2 third conversion
+	ADC1->SQR3 |= ADC_SQR3_SQ3_1;
 
-	// CH4 fourth conversion
-	ADC1->SQR3 |= ADC_SQR3_SQ4_2;
+	//CH3 fourth conversion
+	ADC1->SQR3 |= (ADC_SQR3_SQ4_1|ADC_SQR3_SQ4_0);
 
-	// CH5 fifth conversion
-	ADC1->SQR3 |= (ADC_SQR3_SQ5_2|ADC_SQR3_SQ5_0);
+	// CH4 fifth conversion
+	ADC1->SQR3 |= ADC_SQR3_SQ5_2;
 
-	// CH6 sixth conversion
-	ADC1->SQR3 |= (ADC_SQR3_SQ6_2|ADC_SQR3_SQ6_1);
+	// CH5 sixth conversion
+	ADC1->SQR3 |= (ADC_SQR3_SQ6_2|ADC_SQR3_SQ6_0);
 
-	//CH7 seventh conversion
-	ADC1->SQR2 |= (ADC_SQR2_SQ7_2|ADC_SQR2_SQ7_1|ADC_SQR2_SQ7_0);
+	// CH6 seventh conversion
+	ADC1->SQR2 |= (ADC_SQR2_SQ7_2|ADC_SQR2_SQ7_1);
+
+	//CH7 eighth conversion
+	ADC1->SQR2 |= (ADC_SQR2_SQ8_2|ADC_SQR2_SQ8_1|ADC_SQR2_SQ8_0);
+
+	// CH8 ninth conversion
+	ADC1->SQR2 |= ADC_SQR2_SQ9_3;
+
+	//ADC1->SQR2 &= ~(ADC_SQR2_SQ8);
 	 //------------------------------------------------------
 
 
