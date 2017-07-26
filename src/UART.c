@@ -3,6 +3,7 @@
 
 #include "stm32f407xx.h"
 #include "UART.h"
+#include "stdio.h"
 
 
 
@@ -78,5 +79,29 @@ void print_data(volatile int32_t data)
 	send_data(converted_data[4]);
 	send_data(converted_data[5]);
 
+}
+
+uint8_t return_float_index(char *data)
+{
+	uint8_t index = 0;
+	for (int i = 0; i < 10; ++i)
+	{
+		if (data[i] == 46)
+		{
+			index = i + 4;
+			break;
+		}
+	}
+	return index;
+}
+
+void print_float(float data)
+{
+	char converted[10];
+	snprintf(converted, sizeof(converted), "%.3f", data);
+	for (int i = 0; i < return_float_index(converted); ++i)
+	{
+		send_data(converted[i]);
+	}
 }
 

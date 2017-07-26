@@ -5,6 +5,7 @@
 #include "DMA.h"
 #include "I2C.h"
 #include "LSM9DS1.h"
+#include "stdio.h"
 			
 			// TO DO: filter function /calibrate LSM9DS1 /change i2c to interrupt/ use magdwick algorithm/ current source will probably work
 
@@ -138,7 +139,8 @@ int main(void)
 		filtered_flex[7] = filtered_flex[7] + ((buffer[7] - filtered_flex[7])>>4);
 		output_data[7] = output_data[7] + ((filtered_flex[7] - output_data[7])>>4);
 
-		//DWT->CYCCNT = 0;
+
+		send_data(' ');
 		send_data('x');
 		send_data(' ');
 		print_data((int32_t)accel_data[0]);
