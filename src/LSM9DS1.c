@@ -6,6 +6,8 @@
 #define LSM9DS1_AG_ADDR  0x6B
 #define LSM9DS1_M_ADDR  0x1E
 #define SENSITIVITY_ACCELEROMETER_2  0.000061
+#define SENSITIVITY_GYROSCOPE_245    0.00875
+#define SENSITIVITY_MAGNETOMETER_4   0.00014
 
 void LSM9DS1_init()
 {
@@ -41,6 +43,14 @@ void accel_read(int16_t *accel_data)
 	accel_data[2] = (data[5]<<8) | data[4];
 }
 
+void accel_g(float *accel_data)
+{
+	int16_t data[3];
+	accel_read(data);
+	accel_data[0] = SENSITIVITY_ACCELEROMETER_2*data[0];
+	accel_data[1] = SENSITIVITY_ACCELEROMETER_2*data[1];
+	accel_data[2] = SENSITIVITY_ACCELEROMETER_2*data[2];
+}
 
 
 void gyro_init(uint8_t ODR, uint8_t bandwidth)
@@ -65,6 +75,15 @@ void gyro_read(int16_t *gyro_data)
 	gyro_data[0] = (data[1]<<8) | data[0];
 	gyro_data[1] = (data[3]<<8) | data[2];
 	gyro_data[2] = (data[5]<<8) | data[4];
+}
+
+void gyro_dps(float *gyro_data)
+{
+	int16_t data[3];
+	gyro_read(data);
+	gyro_data[0] = SENSITIVITY_GYROSCOPE_245*data[0];
+	gyro_data[1] = SENSITIVITY_GYROSCOPE_245*data[1];
+	gyro_data[2] = SENSITIVITY_GYROSCOPE_245*data[2];
 }
 
 void mag_init(uint8_t ODR)
@@ -96,5 +115,14 @@ void mag_read(int16_t *mag_data)
 	mag_data[0] = (data[1]<<8) | data[0];
 	mag_data[1] = (data[3]<<8) | data[2];
 	mag_data[2] = (data[5]<<8) | data[4];
+}
+
+void mag_gs(float *mag_data)
+{
+	int16_t data[3];
+	mag_read(data);
+	mag_data[0] = SENSITIVITY_MAGNETOMETER_4*data[0];
+	mag_data[1] = SENSITIVITY_MAGNETOMETER_4*data[1];
+	mag_data[2] = SENSITIVITY_MAGNETOMETER_4*data[2];
 }
 
