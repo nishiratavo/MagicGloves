@@ -6,8 +6,9 @@
 #include "I2C.h"
 #include "LSM9DS1.h"
 #include "stdio.h"
+#include "MadgwickAHRS.h"
 			
-			// TO DO: filter function /calibrate LSM9DS1 /change i2c to interrupt/ use magdwick algorithm/ current source will probably work
+			// TO DO: filter function / use madgwick algorithm/ instrumentation amplifier with LM324 -> test amplifier
 
 #define LSM9DS1_AG_ADDR  0x6B
 int8_t adc_counter = 0;
@@ -25,6 +26,10 @@ int16_t accel_data[] = {0x0, 0x0, 0x0};
 uint8_t accel_test = 0;
 volatile int16_t dummy = 0;
 volatile uint8_t systick_flag = 0;
+float accel_float[3];
+float gyro_float[3];
+int32_t aBias[] = {0, 0, 0};
+int32_t gBias[] = {0, 0, 0};
 
 
 
@@ -82,13 +87,14 @@ void ADC_IRQHandler()
 
 int main(void)
 {
-	(void)SysTick_Config(0x334500); //334500 0x19A280
+	//(void)SysTick_Config(0x334500); //334500 0x19A280
 	ClockConfig();
 	USARTclock_config();
 	I2C_clock_init();
 	I2C_gpio_config();
 	I2C_config(I2C2);
 	LSM9DS1_init();
+	accel_gyro_calibrate(aBias, gBias);
 	GPIO_config();
 	USART_config();
 	NVIC_SetPriority(ADC_IRQn, 2);
@@ -101,19 +107,26 @@ int main(void)
 	DMA2_Stream0 -> M0AR |= (uint32_t)buffer;
 	DMA_config2();
 	adc_config_multi();
+	(void)SysTick_Config(0x334500); //334500 0x19A280
 	//DWT->CTRL |= 0x1;
 
 
 	for(;;)
 	{
 		//dummy = DWT->CYCCNT;
-		I2C_test = I2C_Read(I2C2, LSM9DS1_AG_ADDR, 0x20);
-		accel_test = I2C_Read(I2C2, LSM9DS1_AG_ADDR, 0x27);
-		if (accel_available())
+		//I2C_test = I2C_Read(I2C2, LSM9DS1_AG_ADDR, 0x20);
+		//accel_test = I2C_Read(I2C2, LSM9DS1_AG_ADDR, 0x27);
+		/*if (accel_available())
 		{
 			count++;
-			accel_read(accel_data);
+			accel_g(accel_float, aBias);
+			//accel_read(accel_data, aBias);
 		}
+		if (gyro_available())
+		{
+			gyro_dps(gyro_float, gBias);
+		}*/
+		//MadgwickAHRSupdateIMU(gyro_float[0], gyro_float[1], gyro_float[2], accel_float[0], accel_float[1], accel_float[2]);
 		// change this stuff to a function 
 		filtered_flex[0] = filtered_flex[0] + ((buffer[0] - filtered_flex[0])>>4);
 		output_data[0] = output_data[0] + ((filtered_flex[0] - output_data[0])>>4);
@@ -140,21 +153,35 @@ int main(void)
 		output_data[7] = output_data[7] + ((filtered_flex[7] - output_data[7])>>4);
 
 
-		send_data(' ');
 		send_data('x');
 		send_data(' ');
-		print_data((int32_t)accel_data[0]);
+		print_float(accel_float[0]);
+		//print_data((int32_t)accel_data[0]);
 		send_data(' ');
 		send_data('y');
 		send_data(' ');
-		print_data((int32_t)accel_data[1]);
+		print_float(accel_float[1]);
+		//print_data((int32_t)accel_data[1]);
 		send_data(' ');
 		send_data('z');
 		send_data(' ');
-		print_data((int32_t)accel_data[2]);
+		print_float(accel_float[2]);
+		//print_data((int32_t)accel_data[2]);
 		send_data(' ');
-		//send_data('\n');
-		//send_data('\r');
+		send_data('x');
+		send_data(' ');
+		print_float(gyro_float[0]);
+		//print_data((int32_t)accel_data[0]);
+		send_data(' ');
+		send_data('y');
+		send_data(' ');
+		print_float(gyro_float[1]);
+		//print_data((int32_t)accel_data[1]);
+		send_data(' ');
+		send_data('z');
+		send_data(' ');
+		print_float(gyro_float[2]);
+		send_data(' ');
 		send_data('0');
 		send_data(' ');
 		print_data(output_data[0]);
