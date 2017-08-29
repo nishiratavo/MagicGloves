@@ -2,11 +2,25 @@
 #include "stm32f407xx.h"
 #include "I2C.h"
 
-#define MASTER_MODE_SELECT  ((uint32_t)0x00030001)
+/*#define MASTER_MODE_SELECT  ((uint32_t)0x00030001)
 #define MASTER_TRANSMITTER_MODE  ((uint32_t)0x00070082)
 #define MASTER_RECEIVER_MODE ((uint32_t)0x00030002)
 #define MASTER_BYTE_TRANSMITTED ((uint32_t)0x00070084)
-#define MASTER_BYTE_RECEIVED ((uint32_t)0x00030040)
+#define MASTER_BYTE_RECEIVED ((uint32_t)0x00030040)*/
+
+volatile uint8_t start_flag = 0;
+volatile uint8_t master_mode_select = 0;
+volatile uint8_t master_transmitter_mode = 0;
+volatile uint8_t master_receiver_mode = 0;
+volatile uint8_t master_byte_transmitted = 0;
+volatile uint8_t master_byte_received = 0;
+volatile uint8_t done_flag = 0;
+volatile uint8_t i2c_supplier = 0;
+volatile uint8_t i2c_collector = 0;
+volatile uint8_t i2c_isr_free = 1;
+volatile uint8_t first_time = 1;
+
+i2c_address i2c_buffer[32];
 
 // TO DO : change while content for I2C_check_event function | need to add read and write of more than one byte
 // use enum for configurations
@@ -124,6 +138,7 @@ void I2C_config(I2C_TypeDef* I2Cx)
 {
 	I2C_busy_errata();
 	I2Cx->CR2 |= (I2C_CR2_FREQ_5|I2C_CR2_FREQ_3|I2C_CR2_FREQ_1);
+	I2Cx->CR2 |= (I2C_CR2_ITEVTEN|I2C_CR2_ITBUFEN); // interrupts enabled
 	I2Cx->CCR |= I2C_CCR_FS;
 	I2Cx->CCR |= 0x32; //  3*CCR*Tscl = 1/42MHz
 	I2Cx->TRISE &= 0xFFC0;
@@ -201,6 +216,51 @@ uint8_t I2C_Read(I2C_TypeDef* I2Cx, uint8_t SAD, uint8_t RAD)
 	return I2C_read_nack();
 }
 
+void I2C_Read_IT(I2C_TypeDef* I2Cx, uint8_t SAD, uint8_t RAD, uint8_t data)
+{
+
+	if (start_flag == 1) // State 1 -> send start
+	{
+		while((I2Cx->SR2 & I2C_SR2_BUSY) == I2C_SR2_BUSY);
+		I2Cx->CR1 |= I2C_CR1_START;
+		start_flag = 0;
+	}
+	else if (master_mode_select == 1) // State 2 -> send SAD for writing
+	{
+		SAD = SAD<<1;
+		SAD &= (uint8_t)~((uint8_t)I2C_OAR1_ADD0);
+		I2Cx->DR = SAD;
+		master_mode_select = 2;
+	}
+	else if (master_transmitter_mode == 1) // State 3 -> send RAD
+	{
+		I2Cx->DR = RAD;
+		master_transmitter_mode = 0;
+	}
+	else if (master_byte_transmitted == 1) // State 4 -> send reStart
+	{
+		I2Cx->CR1 |= I2C_CR1_START;
+		master_byte_transmitted = 0;
+	}
+	else if (master_mode_select == 3) // State 5 -> send SAD for reading
+	{
+		SAD |= I2C_OAR1_ADD0;
+		master_mode_select = 0;
+	}
+	else if (master_receiver_mode == 1) // State 6 -> send nack and stop
+	{
+		I2C_acknowledge('D');
+		I2C_stop();
+		master_receiver_mode = 0;
+	}
+	else if (master_byte_received == 1) // State 7 -> read data
+	{
+		data = (uint8_t)I2C2->DR;
+		master_byte_received = 0;
+		start_flag = 1;
+	}
+}
+
 void I2C_Read_Many(I2C_TypeDef* I2Cx, uint8_t SAD, uint8_t RAD, uint8_t *data, uint8_t count)
 {
 	I2C_start(I2Cx, SAD<<1,'W','T');
@@ -240,4 +300,48 @@ void I2C_Write(I2C_TypeDef* I2Cx, uint8_t SAD, uint8_t RAD, uint8_t data)
 	I2C_stop();
 }
 
+void I2C_write_buffer(i2c_address *buffer, i2c_address *data)
+{
+	if (i2c_supplier == (i2c_collector - 1)) 
+	{
+		return;
+	}
+	buffer[i2c_supplier].SAD = data->SAD;
+	buffer[i2c_supplier].RAD = data->RAD;
+	buffer[i2c_supplier].counter = data->counter;
+	buffer[i2c_supplier].pointer_data = data->pointer_data;
+	i2c_supplier++;
+	i2c_supplier &= 0x1F; 
+}
+
+void I2C_read_buffer(i2c_address *buffer, i2c_address *data)
+{
+	
+	if (i2c_collector == i2c_supplier) 
+	{
+		return;
+	}
+	data->SAD = buffer[i2c_collector].SAD;
+	data->RAD = buffer[i2c_collector].RAD;
+	data->counter = buffer[i2c_collector].counter;
+	data->pointer_data = buffer[i2c_collector].pointer_data;
+	i2c_collector ++;
+	i2c_collector &= 0x1F; 
+}
+
+void i2c_read_it(I2C_TypeDef* I2Cx, uint8_t SAD, uint8_t RAD, uint8_t counter, uint8_t *data)
+{
+	i2c_address i2c_read;
+	i2c_read.SAD = SAD;
+	i2c_read.RAD = RAD;
+	i2c.read.counter = counter;
+	i2c_read.pointer_data = data;
+	I2C_write_buffer(i2c_buffer, &i2c_read);
+	if (i2c_isr_free == 1)
+	{
+		i2c_isr_free = 0;
+		I2Cx->CR1 |= I2C_CR1_START;
+	}
+	
+}
 
