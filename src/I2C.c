@@ -138,7 +138,7 @@ void I2C_config(I2C_TypeDef* I2Cx)
 {
 	I2C_busy_errata();
 	I2Cx->CR2 |= (I2C_CR2_FREQ_5|I2C_CR2_FREQ_3|I2C_CR2_FREQ_1);
-	I2Cx->CR2 |= (I2C_CR2_ITEVTEN|I2C_CR2_ITBUFEN); // interrupts enabled
+	//I2Cx->CR2 |= (I2C_CR2_ITEVTEN|I2C_CR2_ITBUFEN); // interrupts enabled
 	I2Cx->CCR |= I2C_CCR_FS;
 	I2Cx->CCR |= 0x32; //  3*CCR*Tscl = 1/42MHz
 	I2Cx->TRISE &= 0xFFC0;
@@ -334,7 +334,7 @@ void i2c_read_it(I2C_TypeDef* I2Cx, uint8_t SAD, uint8_t RAD, uint8_t counter, u
 	i2c_address i2c_read;
 	i2c_read.SAD = SAD;
 	i2c_read.RAD = RAD;
-	i2c.read.counter = counter;
+	i2c_read.counter = counter;
 	i2c_read.pointer_data = data;
 	I2C_write_buffer(i2c_buffer, &i2c_read);
 	if (i2c_isr_free == 1)
