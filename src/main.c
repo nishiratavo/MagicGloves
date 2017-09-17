@@ -9,12 +9,14 @@
 #include "stdio.h"
 #include "circular_buffer.h"
 #include "clockconfig.h"
-//#include "MadgwickAHRS.h"
+#include "MadgwickAHRS.h"
+#include <math.h>
+#include "CS43L22.h"
 			
 
 			//one is faster than the other -> depends on order and it shouldn't
 
-			// TO DO: test with other sensors
+			
 			// TO DO: filter function / use madgwick algorithm/ set I2S / set DAC/
 
 			// circular buffer for ADC data
@@ -25,6 +27,8 @@
 #define SENSITIVITY_ACCELEROMETER_2  0.000061
 #define SENSITIVITY_GYROSCOPE_245    0.00875
 #define SENSITIVITY_MAGNETOMETER_4   0.00014
+#define PI 3.1415
+#define DECLINATION 21.58
 
 int8_t adc_counter = 0;
 uint16_t result = 0;
@@ -51,10 +55,12 @@ volatile float gyro_float[3];
 volatile float mag_float[3];
 int32_t aBias[] = {0, 0, 0};
 int32_t gBias[] = {0, 0, 0};
+volatile uint8_t AHRS_flag = 0;
 
 volatile uint32_t flag = 0;
 volatile uint32_t sr1 = 0;
 volatile uint32_t sr2 = 0;
+
 
 
 i2c_address i2c_buffer[32];
@@ -80,6 +86,10 @@ void SysTick_Handler()
 		ADC1->CR2 |= ADC_CR2_DMA;
 		ADC1->CR2 |= ADC_CR2_SWSTART; 
 		systick_flag = 1;
+	}
+	if (AHRS_flag == 0)
+	{
+		AHRS_flag = 1;
 	}
 }
 
@@ -203,23 +213,50 @@ void I2C2_EV_IRQHandler()
 
 }
 
+void printAttitude(float ax, float ay, float az, float mx, float my, float mz)
+{
+  roll = atan2(ay, az);
+  pitch = atan2(-ax, sqrt(ay * ay + az * az));
+  
+  
+  if (my == 0)
+    yaw = (mx < 0) ? PI : 0;
+  else
+    yaw = atan2(mx, my);
+    
+  yaw -= DECLINATION * PI / 180;
+  
+  if (yaw > PI) yaw -= (2 * PI);
+  else if (yaw < -PI) yaw += (2 * PI);
+  else if (yaw < 0) yaw += 2 * PI;
+  
+  // Convert everything from radians to degrees:
+  yaw *= 180.0 / PI;
+  pitch *= 180.0 / PI;
+  roll  *= 180.0 / PI;
+  
+}
 
 
 
 int main(void)
 {
 	ClockConfig();
-	USARTclock_config();
+	cs43l22_init();
+	cs43l22_ctrl_config();
+	I2C_test = I2C_Read(I2C1, CODEC_I2C_ADDRESS, CODEC_MAP_PLAYBACK_CTRL1);
+	//I2C_test = I2C_Read(I2C1, LSM9DS1_AG_ADDR, 0x0F);
+	/*USARTclock_config();
 	I2C_clock_init();
 	I2C_gpio_config();
 	I2C_config(I2C2);
 	NVIC_SetPriority(I2C2_EV_IRQn, 2);
 	NVIC_EnableIRQ(I2C2_EV_IRQn);
 	LSM9DS1_init();
-	//accel_gyro_calibrate(aBias, gBias);
+	accel_gyro_calibrate(aBias, gBias);
 	GPIO_config();
 	USART_config();
-	/*NVIC_SetPriority(ADC_IRQn, 2);
+	NVIC_SetPriority(ADC_IRQn, 2);
 	NVIC_EnableIRQ(ADC_IRQn);
 	ADCclock_config();
 	GPIOx_config();
@@ -229,34 +266,35 @@ int main(void)
 	DMA2_Stream0 -> M0AR |= (uint32_t)buffer;
 	DMA_config2();
 	adc_config_multi();
-	(void)SysTick_Config(0x334500); //334500 0x19A280*/
+	(void)SysTick_Config(0x334500); //334500 0x19A280
 	//DWT->CTRL |= 0x1;
-	I2C2->CR2 |= (I2C_CR2_ITEVTEN|I2C_CR2_ITBUFEN);
+	I2C2->CR2 |= (I2C_CR2_ITEVTEN|I2C_CR2_ITBUFEN);*/
 
 
 	for(;;)
 	{
+		I2C_test = I2C_Read(I2C1, LSM9DS1_AG_ADDR, 0x0F);
 		//dummy = DWT->CYCCNT;
 		//I2C_test = I2C_Read(I2C2, LSM9DS1_AG_ADDR, 0x20);
 		//I2C_Read_IT(I2C2, LSM9DS1_AG_ADDR, 0x0F, accel_test);
 		//i2c_read_it(I2C2,LSM9DS1_AG_ADDR, OUT_X_L_XL|0x80, 6, accel_test);
-		i2c_read_it(I2C2,LSM9DS1_AG_ADDR, OUT_X_L_G|0x80, 6, gyro_test);
+		/*i2c_read_it(I2C2,LSM9DS1_AG_ADDR, OUT_X_L_G|0x80, 6, gyro_test);
 		gyro_data[0] = (gyro_test[1]<<8) | gyro_test[0];
 		gyro_data[1] = (gyro_test[3]<<8) | gyro_test[2];
 		gyro_data[2] = (gyro_test[5]<<8) | gyro_test[4];
 
-		gyro_float[0] = SENSITIVITY_GYROSCOPE_245*gyro_data[0];
-		gyro_float[1] = SENSITIVITY_GYROSCOPE_245*gyro_data[1];
-		gyro_float[2] = SENSITIVITY_GYROSCOPE_245*gyro_data[2];
+		gyro_float[0] = SENSITIVITY_GYROSCOPE_245*(gyro_data[0] - gBias[0]);
+		gyro_float[1] = SENSITIVITY_GYROSCOPE_245*(gyro_data[1] - gBias[1]);
+		gyro_float[2] = SENSITIVITY_GYROSCOPE_245*(gyro_data[2] - gBias[2]);
 
 		i2c_read_it(I2C2,LSM9DS1_AG_ADDR, OUT_X_L_XL|0x80, 6, accel_test);
 		accel_data[0] = (accel_test[1]<<8) | accel_test[0];
 		accel_data[1] = (accel_test[3]<<8) | accel_test[2];
 		accel_data[2] = (accel_test[5]<<8) | accel_test[4];
 
-		accel_float[0] = SENSITIVITY_ACCELEROMETER_2*accel_data[0];
-		accel_float[1] = SENSITIVITY_ACCELEROMETER_2*accel_data[1];
-		accel_float[2] = SENSITIVITY_ACCELEROMETER_2*accel_data[2];
+		accel_float[0] = SENSITIVITY_ACCELEROMETER_2*(accel_data[0] - aBias[0]);
+		accel_float[1] = SENSITIVITY_ACCELEROMETER_2*(accel_data[1] - aBias[1]);
+		accel_float[2] = SENSITIVITY_ACCELEROMETER_2*(accel_data[2] - aBias[2]);
 
 		i2c_read_it(I2C2,LSM9DS1_M_ADDR, OUT_X_L_M|0x80, 6, mag_test);
 		mag_data[0] = (mag_test[1]<<8) | mag_test[0];
@@ -265,7 +303,7 @@ int main(void)
 
 		mag_float[0] = SENSITIVITY_MAGNETOMETER_4*mag_data[0];
 		mag_float[1] = SENSITIVITY_MAGNETOMETER_4*mag_data[1];
-		mag_float[2] = SENSITIVITY_MAGNETOMETER_4*mag_data[2];
+		mag_float[2] = SENSITIVITY_MAGNETOMETER_4*mag_data[2];*/
 
 		//i2c_read_it(I2C2,LSM9DS1_M_ADDR, 0x0F, 0, &I2C_test);
 		/*if (accel_available())
@@ -278,6 +316,13 @@ int main(void)
 		{
 			gyro_dps(gyro_float, gBias);
 		}*/
+		if (AHRS_flag == 1)
+		{
+			//MadgwickAHRSupdate(-gyro_float[0], -gyro_float[1], -gyro_float[2], accel_float[0], accel_float[1], accel_float[2],mag_float[0],-mag_float[1],-mag_float[2]);
+			printAttitude(accel_float[0], accel_float[1], accel_float[2], -mag_float[1], -mag_float[0], mag_float[2]);
+			//toEulerianAngle();
+			AHRS_flag = 0;
+		}
 		//MadgwickAHRSupdateIMU(gyro_float[0], gyro_float[1], gyro_float[2], accel_float[0], accel_float[1], accel_float[2]);
 		// change this stuff to a function 
 		filtered_flex[0] = filtered_flex[0] + ((buffer[0] - filtered_flex[0])>>4);
@@ -305,19 +350,19 @@ int main(void)
 		output_data[7] = output_data[7] + ((filtered_flex[7] - output_data[7])>>4);
 
 
-		send_data('x');
+		/*send_data('x');
 		send_data(' ');
-		print_float(accel_float[0]);
+		print_float(roll);
 		//print_data((int32_t)accel_data[0]);
 		send_data(' ');
 		send_data('y');
 		send_data(' ');
-		print_float(accel_float[1]);
+		print_float(yaw);
 		//print_data((int32_t)accel_data[1]);
 		send_data(' ');
 		send_data('z');
 		send_data(' ');
-		print_float(accel_float[2]);
+		print_float(pitch);
 		//print_data((int32_t)accel_data[2]);
 		send_data(' ');
 		send_data('x');
@@ -332,10 +377,10 @@ int main(void)
 		send_data(' ');
 		send_data('z');
 		send_data(' ');
-		print_float(gyro_float[2]);
+		print_float(gyro_float[2]);*/
 		//print_data((int32_t)gyro_data[2]);
 
-		send_data(' ');
+		/*send_data(' ');
 		send_data('x');
 		send_data(' ');
 		//print_float(gyro_float[0]);
@@ -349,7 +394,7 @@ int main(void)
 		send_data('z');
 		send_data(' ');
 		//print_float(gyro_float[2]);
-		print_float(mag_float[2]);
+		print_float(mag_float[2]);*/
 		/*send_data(' ');
 		send_data('0');
 		send_data(' ');
@@ -382,8 +427,8 @@ int main(void)
 		send_data('7');
 		send_data(' ');
 		print_data(output_data[7]);*/
-		send_data('\n');
-		send_data('\r');
+		//send_data('\n');
+		//send_data('\r');
 		count++;
 		//count = DWT->CYCCNT;
 		//-----------------------------
