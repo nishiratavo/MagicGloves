@@ -46,26 +46,26 @@ void I2C_gpio_config() // I2C2_SDA -> PB11 and  I2C2_SCL -> PB10
 	GPIOB->AFR[1] |= 0x4400; // alternate function I2C PB11 and PB10
 }
 
-void I2C_acknowledge(char config) // 'E' for enable 'D' for disable
+void I2C_acknowledge(I2C_TypeDef* I2Cx, char config) // 'E' for enable 'D' for disable
 {
 	if (config == 'E')
 	{
-		I2C2->CR1 |= I2C_CR1_ACK;
+		I2Cx->CR1 |= I2C_CR1_ACK;
 	}
 	else if (config == 'D')
 	{
-		I2C2->CR1 &= ~(I2C_CR1_ACK);
+		I2Cx->CR1 &= ~(I2C_CR1_ACK);
 	}
 }
 
-uint8_t I2C_check_event(uint32_t event)
+uint8_t I2C_check_event(I2C_TypeDef* I2Cx, uint32_t event)
 {
 	volatile uint32_t flag = 0;
 	volatile uint32_t sr1 = 0;
 	volatile uint32_t sr2 = 0;
 
-	sr1 = I2C2->SR1; 
-	sr2 = I2C2->SR2;
+	sr1 = I2Cx->SR1; 
+	sr2 = I2Cx->SR2;
 	sr2 = sr2<<16;
 
 	flag = (sr1|sr2);
@@ -157,7 +157,7 @@ void I2C_start(I2C_TypeDef* I2Cx, uint8_t adress, char direction, char check_bus
 
 	}
 	I2Cx->CR1 |= I2C_CR1_START; // send start condition
-	while(!I2C_check_event(MASTER_MODE_SELECT));// see if SB, MSL and BUSY flag are set
+	while(!I2C_check_event(I2Cx, MASTER_MODE_SELECT));// see if SB, MSL and BUSY flag are set
 	if (direction == 'R') // for read LSB is set
 	{
 		adress |= I2C_OAR1_ADD0;
@@ -171,49 +171,49 @@ void I2C_start(I2C_TypeDef* I2Cx, uint8_t adress, char direction, char check_bus
 
 	if (direction == 'W')
 	{
-		while(!I2C_check_event(MASTER_TRANSMITTER_MODE)); //see if BUSY, MSL, ADDR, TXE and TRA flags are set
+		while(!I2C_check_event(I2Cx, MASTER_TRANSMITTER_MODE)); //see if BUSY, MSL, ADDR, TXE and TRA flags are set
 	}
 	else if (direction == 'R')
 	{
-		while(!I2C_check_event(MASTER_RECEIVER_MODE)); // see if BUSY, MSL and ADDR flags are set
+		while(!I2C_check_event(I2Cx, MASTER_RECEIVER_MODE)); // see if BUSY, MSL and ADDR flags are set
 	}
 
 }
 
-void I2C_write(uint8_t data)
+void I2C_write(I2C_TypeDef* I2Cx, uint8_t data)
 {
-	I2C2->DR = data;
-	while(!I2C_check_event(MASTER_BYTE_TRANSMITTED)); // see if TRA, BUSY, MSL, TXE and BTF flags are set
+	I2Cx->DR = data;
+	while(!I2C_check_event(I2Cx, MASTER_BYTE_TRANSMITTED)); // see if TRA, BUSY, MSL, TXE and BTF flags are set
 }
 
-uint8_t I2C_read_ack()
+uint8_t I2C_read_ack(I2C_TypeDef* I2Cx)
 {
-	I2C_acknowledge('E');
-	while(!I2C_check_event(MASTER_BYTE_RECEIVED));  // see if BUSY, MSL and RXNE flags are set
-	uint8_t data = (uint8_t)I2C2->DR;
+	I2C_acknowledge(I2Cx, 'E');
+	while(!I2C_check_event(I2Cx, MASTER_BYTE_RECEIVED));  // see if BUSY, MSL and RXNE flags are set
+	uint8_t data = (uint8_t)I2Cx->DR;
 	return data;
 }
 
-uint8_t I2C_read_nack()
+uint8_t I2C_read_nack(I2C_TypeDef* I2Cx)
 {
-	I2C_acknowledge('D');
-	I2C_stop();
-	while(!I2C_check_event(MASTER_BYTE_RECEIVED)); // see if BUSY, MSL and RXNE flags are set
-	uint8_t data = (uint8_t)I2C2->DR;
+	I2C_acknowledge(I2Cx, 'D');
+	I2C_stop(I2Cx);
+	while(!I2C_check_event(I2Cx, MASTER_BYTE_RECEIVED)); // see if BUSY, MSL and RXNE flags are set
+	uint8_t data = (uint8_t)I2Cx->DR;
 	return data;
 }
 
-void I2C_stop()
+void I2C_stop(I2C_TypeDef* I2Cx)
 {
-	I2C2->CR1 |= I2C_CR1_STOP;
+	I2Cx->CR1 |= I2C_CR1_STOP;
 }
 
 uint8_t I2C_Read(I2C_TypeDef* I2Cx, uint8_t SAD, uint8_t RAD)
 {
 	I2C_start(I2Cx, SAD<<1,'W','T');
-	I2C_write(RAD);
+	I2C_write(I2Cx, RAD);
 	I2C_start(I2Cx, SAD<<1,'R','F');
-	return I2C_read_nack();
+	return I2C_read_nack(I2Cx);
 }
 
 void I2C_Read_IT(I2C_TypeDef* I2Cx, uint8_t SAD, uint8_t RAD, uint8_t data)
@@ -249,8 +249,8 @@ void I2C_Read_IT(I2C_TypeDef* I2Cx, uint8_t SAD, uint8_t RAD, uint8_t data)
 	}
 	else if (master_receiver_mode == 1) // State 6 -> send nack and stop
 	{
-		I2C_acknowledge('D');
-		I2C_stop();
+		I2C_acknowledge(I2Cx, 'D');
+		I2C_stop(I2Cx);
 		master_receiver_mode = 0;
 	}
 	else if (master_byte_received == 1) // State 7 -> read data
@@ -264,30 +264,30 @@ void I2C_Read_IT(I2C_TypeDef* I2Cx, uint8_t SAD, uint8_t RAD, uint8_t data)
 void I2C_Read_Many(I2C_TypeDef* I2Cx, uint8_t SAD, uint8_t RAD, uint8_t *data, uint8_t count)
 {
 	I2C_start(I2Cx, SAD<<1,'W','T');
-	I2C_write(RAD);
+	I2C_write(I2Cx, RAD);
 	I2C_start(I2Cx, SAD<<1,'R','F');
 	for (uint8_t i = 0; i < count; ++i)
 	{
 		if (i == count - 3)
 		{
-			while(!I2C_check_event(1<<2));
-			I2C_acknowledge('D');
+			while(!I2C_check_event(I2Cx,1<<2));
+			I2C_acknowledge(I2Cx, 'D');
 			data[i] = (uint8_t)I2Cx->DR;
 		}
 		else if (i == count - 2)
 		{
-			while(!I2C_check_event(1<<2));
-			I2C_stop();
+			while(!I2C_check_event(I2Cx, 1<<2));
+			I2C_stop(I2Cx);
 			data[i] = (uint8_t)I2Cx->DR;
 		}
 		else if (i == count - 1)
 		{
-			while(!I2C_check_event(MASTER_BYTE_RECEIVED));
+			while(!I2C_check_event(I2Cx, MASTER_BYTE_RECEIVED));
 			data[i] = (uint8_t)I2C2->DR;
 		}
 		else
 		{
-			data[i] = I2C_read_ack();
+			data[i] = I2C_read_ack(I2Cx);
 		}
 	}
 }
@@ -295,9 +295,9 @@ void I2C_Read_Many(I2C_TypeDef* I2Cx, uint8_t SAD, uint8_t RAD, uint8_t *data, u
 void I2C_Write(I2C_TypeDef* I2Cx, uint8_t SAD, uint8_t RAD, uint8_t data)
 {
 	I2C_start(I2Cx, SAD<<1,'W','T');
-	I2C_write(RAD);
-	I2C_write(data);
-	I2C_stop();
+	I2C_write(I2Cx, RAD);
+	I2C_write(I2Cx, data);
+	I2C_stop(I2Cx);
 }
 
 void I2C_write_buffer(i2c_address *buffer, i2c_address *data)
