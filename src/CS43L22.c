@@ -1,6 +1,7 @@
 #include "stm32f407xx.h"
 #include "CS43L22.h"
 #include "I2C.h"
+#include "I2S.h"
 
 void I2C1_busy_errata()
 {
@@ -114,7 +115,7 @@ void cs43l22_ctrl_config()
 	reg = I2C_Read(I2C1, CODEC_I2C_ADDRESS, 0x32);
 	I2C_Write(I2C1, CODEC_I2C_ADDRESS, 0x32, reg|0x80);
 	reg = I2C_Read(I2C1, CODEC_I2C_ADDRESS, 0x32);
-	I2C_Write(I2C1, CODEC_I2C_ADDRESS, 0x32, reg&(~0x80);
+	I2C_Write(I2C1, CODEC_I2C_ADDRESS, 0x32, reg&(~0x80));
 	I2C_Write(I2C1, CODEC_I2C_ADDRESS, 0x00, 0x00);
 	//end of init sequence
 
@@ -124,8 +125,10 @@ void cs43l22_ctrl_config()
 	I2C_Write(I2C1, CODEC_I2C_ADDRESS, CODEC_MAP_IF_CTRL1, 0x07); // data size and format
 	I2C_Write(I2C1, CODEC_I2C_ADDRESS, 0x0A, 0x00); // soft ramp zero cross disabled
 	I2C_Write(I2C1, CODEC_I2C_ADDRESS, 0x27, 0x00); // limits signal in 0 dB
+	//I2C_Write(I2C1, CODEC_I2C_ADDRESS, 0x1A, 0x0A);
+	//I2C_Write(I2C1, CODEC_I2C_ADDRESS, 0x1B, 0x0A);
 	I2C_Write(I2C1, CODEC_I2C_ADDRESS, 0x1F, 0x0F); // treble and bass gain
-	I2C_Write(I2C1, CODEC_I2C_ADDRESS, CODEC_MAP_PWR_CTRL1, 0x9E); // turns on dac 
+	//I2C_Write(I2C1, CODEC_I2C_ADDRESS, CODEC_MAP_PWR_CTRL1, 0x9E); // turns on dac 
 
 
 }

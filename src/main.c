@@ -12,7 +12,10 @@
 #include "MadgwickAHRS.h"
 #include <math.h>
 #include "CS43L22.h"
+#include "I2S.h"
 			
+
+
 
 			//one is faster than the other -> depends on order and it shouldn't
 
@@ -29,6 +32,32 @@
 #define SENSITIVITY_MAGNETOMETER_4   0.00014
 #define PI 3.1415
 #define DECLINATION 21.58
+
+
+
+
+static int16_t lut[] = {3750,3934,4118,4300,4482,4661,4839,5013,
+5185,5353,5518,5678,5833,5984,6129,6268,
+6402,6529,6649,6762,6868,6966,7057,7140,
+7215,7281,7339,7388,7428,7459,7482,7495,
+7500,7495,7482,7459,7428,7388,7339,7281,
+7215,7140,7057,6966,6868,6762,6649,6529,
+6402,6268,6129,5984,5833,5678,5518,5353,
+5185,5013,4839,4661,4482,4300,4118,3934,
+3750,3566,3382,3200,3018,2839,2661,2487,
+2315,2147,1982,1822,1667,1516,1371,1232,
+1098,971,851,738,632,534,443,360,
+285,219,161,112,72,41,18,5,
+0,5,18,41,72,112,161,219,
+285,360,443,534,632,738,851,971,
+1098,1232,1371,1516,1667,1822,1982,2147,
+2315,2487,2661,2839,3018,3200,3382,3566};
+
+static volatile uint16_t DMAI2SBuffer0[128] __attribute__ ((aligned (4)));
+static volatile uint16_t DMAI2SBuffer1[128] __attribute__ ((aligned (4)));
+
+volatile uint8_t DMA_I2S_buffer_flag = 0;
+volatile uint8_t wait_read = 0;
 
 int8_t adc_counter = 0;
 uint16_t result = 0;
@@ -61,9 +90,10 @@ volatile uint32_t flag = 0;
 volatile uint32_t sr1 = 0;
 volatile uint32_t sr2 = 0;
 
-
-
 i2c_address i2c_buffer[32];
+
+uint32_t i = 0;
+uint32_t j = 0;
 
 
 void DMA2_Stream0_IRQHandler()
@@ -75,6 +105,20 @@ void DMA2_Stream0_IRQHandler()
 		DMA2 -> LIFCR |= DMA_LIFCR_CTCIF0;
 		DMA2 -> LIFCR |= DMA_LISR_HTIF0;
 	}
+}
+
+void DMA1_Stream5_IRQHandler()
+{
+	if (DMA_I2S_buffer_flag == 0)
+	{
+		DMA_I2S_buffer_flag = 1;
+	}
+	else if (DMA_I2S_buffer_flag == 1)
+	{
+		DMA_I2S_buffer_flag = 0;
+	}
+	wait_read = 0;
+	DMA1->HIFCR = DMA_HIFCR_CTCIF5;
 }
 
 
@@ -239,12 +283,23 @@ void printAttitude(float ax, float ay, float az, float mx, float my, float mz)
 
 
 
+
+
+
 int main(void)
 {
 	ClockConfig();
 	cs43l22_init();
 	cs43l22_ctrl_config();
+	I2C_Write(I2C1, CODEC_I2C_ADDRESS, CODEC_MAP_PWR_CTRL1, 0x9E);
 	I2C_test = I2C_Read(I2C1, CODEC_I2C_ADDRESS, CODEC_MAP_PLAYBACK_CTRL1);
+	i2s_init();
+	NVIC_SetPriority(DMA1_Stream5_IRQn, 1);
+	NVIC_EnableIRQ(DMA1_Stream5_IRQn);
+	DMA_I2S_config();
+	DMA1_Stream5 -> M0AR |= (uint32_t)DMAI2SBuffer0;
+	DMA1_Stream5 -> M1AR |= (uint32_t)DMAI2SBuffer1;
+	DMA_I2S_config2();
 	//I2C_test = I2C_Read(I2C1, LSM9DS1_AG_ADDR, 0x0F);
 	/*USARTclock_config();
 	I2C_clock_init();
@@ -262,9 +317,9 @@ int main(void)
 	GPIOx_config();
 	NVIC_SetPriority(DMA2_Stream0_IRQn, 1);
 	NVIC_EnableIRQ(DMA2_Stream0_IRQn);
-	DMA_config();
+	DMA_ADC_config();
 	DMA2_Stream0 -> M0AR |= (uint32_t)buffer;
-	DMA_config2();
+	DMA_ADC_config2();
 	adc_config_multi();
 	(void)SysTick_Config(0x334500); //334500 0x19A280
 	//DWT->CTRL |= 0x1;
@@ -273,7 +328,56 @@ int main(void)
 
 	for(;;)
 	{
-		I2C_test = I2C_Read(I2C1, LSM9DS1_AG_ADDR, 0x0F);
+		if (DMA_I2S_buffer_flag == 0 && wait_read == 0)
+		{
+			DMAI2SBuffer0[i] = lut[i];
+			i++;
+			if (i == 128)
+			{
+				i = 0;
+				wait_read = 1;
+			}
+		}
+		else if (DMA_I2S_buffer_flag == 1 && wait_read == 0)
+		{
+			DMAI2SBuffer1[i] = lut[i];
+			i++;
+			if (i == 128)
+			{
+				i = 0;
+				wait_read = 1;
+			}
+		}
+		//I2C_test = I2C_Read(I2C1, LSM9DS1_AG_ADDR, 0x0F);
+		/*if (get_status(SPI_SR_TXE))
+		{
+			SPI3->DR = lut[i];
+			if (j == 2)
+			{
+				i++;
+				j = 0;
+			}
+			j++;
+			if (i > 99)
+			{
+				i = 0;
+			}*/
+			/*if (i <= 160)
+			{
+				SPI3->DR = (int16_t)0x3FFF;
+			}
+
+			if((i < 320) && (i > 160))
+			{
+				SPI3->DR = (int16_t)0x0;
+			}
+			i++;
+			if (i > 320)
+			{
+				i = 0;
+			}
+
+		}*/	
 		//dummy = DWT->CYCCNT;
 		//I2C_test = I2C_Read(I2C2, LSM9DS1_AG_ADDR, 0x20);
 		//I2C_Read_IT(I2C2, LSM9DS1_AG_ADDR, 0x0F, accel_test);
