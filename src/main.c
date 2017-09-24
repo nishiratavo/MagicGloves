@@ -27,31 +27,48 @@
 
 #define LSM9DS1_AG_ADDR  0x6B
 #define LSM9DS1_M_ADDR  0x1E
-#define SENSITIVITY_ACCELEROMETER_2  0.000061
-#define SENSITIVITY_GYROSCOPE_245    0.00875
-#define SENSITIVITY_MAGNETOMETER_4   0.00014
+#define SENSITIVITY_ACCELEROMETER_2  (float)0.000061
+#define SENSITIVITY_GYROSCOPE_245    (float)0.00875
+#define SENSITIVITY_MAGNETOMETER_4   (float)0.00014
 #define PI 3.1415
 #define DECLINATION 21.58
 
+#define LUT_SIZE 256
+#define DMA_I2S_BUFFER_SIZE 128
 
 
-
-static int16_t lut[] = {3750,3934,4118,4300,4482,4661,4839,5013,
-5185,5353,5518,5678,5833,5984,6129,6268,
-6402,6529,6649,6762,6868,6966,7057,7140,
-7215,7281,7339,7388,7428,7459,7482,7495,
-7500,7495,7482,7459,7428,7388,7339,7281,
-7215,7140,7057,6966,6868,6762,6649,6529,
-6402,6268,6129,5984,5833,5678,5518,5353,
-5185,5013,4839,4661,4482,4300,4118,3934,
-3750,3566,3382,3200,3018,2839,2661,2487,
-2315,2147,1982,1822,1667,1516,1371,1232,
-1098,971,851,738,632,534,443,360,
-285,219,161,112,72,41,18,5,
-0,5,18,41,72,112,161,219,
-285,360,443,534,632,738,851,971,
-1098,1232,1371,1516,1667,1822,1982,2147,
-2315,2487,2661,2839,3018,3200,3382,3566};
+static int16_t lut[] = {3750,3842,3934,4026,4118,4209,4300,4391,
+4482,4572,4661,4750,4839,4926,5013,5100,
+5185,5270,5353,5436,5518,5598,5678,5756,
+5833,5909,5984,6057,6129,6199,6268,6336,
+6402,6466,6529,6590,6649,6706,6762,6816,
+6868,6918,6966,7013,7057,7100,7140,7178,
+7215,7249,7281,7311,7339,7364,7388,7409,
+7428,7445,7459,7472,7482,7490,7495,7499,
+7500,7499,7495,7490,7482,7472,7459,7445,
+7428,7409,7388,7364,7339,7311,7281,7249,
+7215,7178,7140,7100,7057,7013,6966,6918,
+6868,6816,6762,6706,6649,6590,6529,6466,
+6402,6336,6268,6199,6129,6057,5984,5909,
+5833,5756,5678,5598,5518,5436,5353,5270,
+5185,5100,5013,4926,4839,4750,4661,4572,
+4482,4391,4300,4209,4118,4026,3934,3842,
+3750,3658,3566,3474,3382,3291,3200,3109,
+3018,2928,2839,2750,2661,2574,2487,2400,
+2315,2230,2147,2064,1982,1902,1822,1744,
+1667,1591,1516,1443,1371,1301,1232,1164,
+1098,1034,971,910,851,794,738,684,
+632,582,534,487,443,400,360,322,
+285,251,219,189,161,136,112,91,
+72,55,41,28,18,10,5,1,
+0,1,5,10,18,28,41,55,
+72,91,112,136,161,189,219,251,
+285,322,360,400,443,487,534,582,
+632,684,738,794,851,910,971,1034,
+1098,1164,1232,1301,1371,1443,1516,1591,
+1667,1744,1822,1902,1982,2064,2147,2230,
+2315,2400,2487,2574,2661,2750,2839,2928,
+3018,3109,3200,3291,3382,3474,3566,3658};
 
 static volatile uint16_t DMAI2SBuffer0[128] __attribute__ ((aligned (4)));
 static volatile uint16_t DMAI2SBuffer1[128] __attribute__ ((aligned (4)));
@@ -67,7 +84,7 @@ uint8_t i2c_counter = 0;
 uint8_t i2c_data_counter = 0;
 volatile int32_t filtered_flex[] = {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
 volatile int32_t output_data[] = {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
-volatile int16_t buffer[13];
+volatile int16_t buffer[16];
 volatile int32_t flex_data[] = {0x0, 0x0, 0x0, 0x0};
 volatile int count = 0;
 uint8_t I2C_test = 0;
@@ -98,12 +115,12 @@ uint32_t j = 0;
 
 void DMA2_Stream0_IRQHandler()
 {
-	if (((DMA2 -> LISR)&(DMA_LISR_TCIF0)) == DMA_LISR_TCIF0 )
+	if (((DMA2->LISR)&(DMA_LISR_TCIF0)) == DMA_LISR_TCIF0 )
 	{
 		systick_flag = 0;
-		DMA2 -> LIFCR |= DMA_LIFCR_CTEIF0;
-		DMA2 -> LIFCR |= DMA_LIFCR_CTCIF0;
-		DMA2 -> LIFCR |= DMA_LISR_HTIF0;
+		DMA2->LIFCR |= DMA_LIFCR_CTEIF0;
+		DMA2->LIFCR |= DMA_LIFCR_CTCIF0;
+		DMA2->LIFCR |= DMA_LISR_HTIF0;
 	}
 }
 
@@ -301,113 +318,97 @@ int main(void)
 	DMA1_Stream5 -> M1AR |= (uint32_t)DMAI2SBuffer1;
 	DMA_I2S_config2();
 	//I2C_test = I2C_Read(I2C1, LSM9DS1_AG_ADDR, 0x0F);
-	/*USARTclock_config();
+	//USARTclock_config();
 	I2C_clock_init();
 	I2C_gpio_config();
 	I2C_config(I2C2);
-	NVIC_SetPriority(I2C2_EV_IRQn, 2);
+	NVIC_SetPriority(I2C2_EV_IRQn, 1);
 	NVIC_EnableIRQ(I2C2_EV_IRQn);
 	LSM9DS1_init();
 	accel_gyro_calibrate(aBias, gBias);
-	GPIO_config();
-	USART_config();
+	//GPIO_config();
+	//USART_config();
+	
 	NVIC_SetPriority(ADC_IRQn, 2);
 	NVIC_EnableIRQ(ADC_IRQn);
 	ADCclock_config();
 	GPIOx_config();
-	NVIC_SetPriority(DMA2_Stream0_IRQn, 1);
+	NVIC_SetPriority(DMA2_Stream0_IRQn, 2);
 	NVIC_EnableIRQ(DMA2_Stream0_IRQn);
 	DMA_ADC_config();
 	DMA2_Stream0 -> M0AR |= (uint32_t)buffer;
 	DMA_ADC_config2();
 	adc_config_multi();
-	(void)SysTick_Config(0x334500); //334500 0x19A280
-	//DWT->CTRL |= 0x1;
-	I2C2->CR2 |= (I2C_CR2_ITEVTEN|I2C_CR2_ITBUFEN);*/
+	(void)SysTick_Config(0x19A280); //334500 0x19A280
+	NVIC_SetPriority(SysTick_IRQn, 3);
+	I2C2->CR2 |= (I2C_CR2_ITEVTEN|I2C_CR2_ITBUFEN);
 
 
 	for(;;)
 	{
 		if (DMA_I2S_buffer_flag == 0 && wait_read == 0)
 		{
-			DMAI2SBuffer0[i] = lut[i];
+			DMAI2SBuffer0[i] = lut[j];
 			i++;
-			if (i == 128)
+			j++;
+			if (i == DMA_I2S_BUFFER_SIZE)
 			{
 				i = 0;
 				wait_read = 1;
+			}
+			if (j == LUT_SIZE)
+			{
+				j = 0 ;
 			}
 		}
 		else if (DMA_I2S_buffer_flag == 1 && wait_read == 0)
 		{
-			DMAI2SBuffer1[i] = lut[i];
+			DMAI2SBuffer1[i] = lut[j];
 			i++;
-			if (i == 128)
+			j++;
+			if (i == DMA_I2S_BUFFER_SIZE)
 			{
 				i = 0;
 				wait_read = 1;
 			}
+			if (j == LUT_SIZE)
+			{
+				j = 0 ;
+			}
 		}
 		//I2C_test = I2C_Read(I2C1, LSM9DS1_AG_ADDR, 0x0F);
-		/*if (get_status(SPI_SR_TXE))
-		{
-			SPI3->DR = lut[i];
-			if (j == 2)
-			{
-				i++;
-				j = 0;
-			}
-			j++;
-			if (i > 99)
-			{
-				i = 0;
-			}*/
-			/*if (i <= 160)
-			{
-				SPI3->DR = (int16_t)0x3FFF;
-			}
-
-			if((i < 320) && (i > 160))
-			{
-				SPI3->DR = (int16_t)0x0;
-			}
-			i++;
-			if (i > 320)
-			{
-				i = 0;
-			}
-
-		}*/	
+		
+	
 		//dummy = DWT->CYCCNT;
 		//I2C_test = I2C_Read(I2C2, LSM9DS1_AG_ADDR, 0x20);
 		//I2C_Read_IT(I2C2, LSM9DS1_AG_ADDR, 0x0F, accel_test);
 		//i2c_read_it(I2C2,LSM9DS1_AG_ADDR, OUT_X_L_XL|0x80, 6, accel_test);
-		/*i2c_read_it(I2C2,LSM9DS1_AG_ADDR, OUT_X_L_G|0x80, 6, gyro_test);
+		i2c_read_it(I2C2,LSM9DS1_AG_ADDR, OUT_X_L_G|0x80, 6, gyro_test);
 		gyro_data[0] = (gyro_test[1]<<8) | gyro_test[0];
 		gyro_data[1] = (gyro_test[3]<<8) | gyro_test[2];
 		gyro_data[2] = (gyro_test[5]<<8) | gyro_test[4];
 
-		gyro_float[0] = SENSITIVITY_GYROSCOPE_245*(gyro_data[0] - gBias[0]);
-		gyro_float[1] = SENSITIVITY_GYROSCOPE_245*(gyro_data[1] - gBias[1]);
-		gyro_float[2] = SENSITIVITY_GYROSCOPE_245*(gyro_data[2] - gBias[2]);
+		gyro_float[0] = (float)SENSITIVITY_GYROSCOPE_245*(gyro_data[0] - gBias[0]);
+		gyro_float[1] = (float)SENSITIVITY_GYROSCOPE_245*(gyro_data[1] - gBias[1]);
+		gyro_float[2] = (float)SENSITIVITY_GYROSCOPE_245*(gyro_data[2] - gBias[2]);
 
 		i2c_read_it(I2C2,LSM9DS1_AG_ADDR, OUT_X_L_XL|0x80, 6, accel_test);
 		accel_data[0] = (accel_test[1]<<8) | accel_test[0];
 		accel_data[1] = (accel_test[3]<<8) | accel_test[2];
 		accel_data[2] = (accel_test[5]<<8) | accel_test[4];
 
-		accel_float[0] = SENSITIVITY_ACCELEROMETER_2*(accel_data[0] - aBias[0]);
-		accel_float[1] = SENSITIVITY_ACCELEROMETER_2*(accel_data[1] - aBias[1]);
-		accel_float[2] = SENSITIVITY_ACCELEROMETER_2*(accel_data[2] - aBias[2]);
+		accel_float[0] = (float)SENSITIVITY_ACCELEROMETER_2*(accel_data[0] - aBias[0]);
+		accel_float[1] = (float)SENSITIVITY_ACCELEROMETER_2*(accel_data[1] - aBias[1]);
+		accel_float[2] = (float)SENSITIVITY_ACCELEROMETER_2*(accel_data[2] - aBias[2]);
 
 		i2c_read_it(I2C2,LSM9DS1_M_ADDR, OUT_X_L_M|0x80, 6, mag_test);
 		mag_data[0] = (mag_test[1]<<8) | mag_test[0];
 		mag_data[1] = (mag_test[3]<<8) | mag_test[2];
 		mag_data[2] = (mag_test[5]<<8) | mag_test[4];
 
-		mag_float[0] = SENSITIVITY_MAGNETOMETER_4*mag_data[0];
-		mag_float[1] = SENSITIVITY_MAGNETOMETER_4*mag_data[1];
-		mag_float[2] = SENSITIVITY_MAGNETOMETER_4*mag_data[2];*/
+		mag_float[0] = (float)SENSITIVITY_MAGNETOMETER_4*mag_data[0];
+		mag_float[1] = (float)SENSITIVITY_MAGNETOMETER_4*mag_data[1];
+		mag_float[2] = (float)SENSITIVITY_MAGNETOMETER_4*mag_data[2];
 
 		//i2c_read_it(I2C2,LSM9DS1_M_ADDR, 0x0F, 0, &I2C_test);
 		/*if (accel_available())
@@ -423,7 +424,7 @@ int main(void)
 		if (AHRS_flag == 1)
 		{
 			//MadgwickAHRSupdate(-gyro_float[0], -gyro_float[1], -gyro_float[2], accel_float[0], accel_float[1], accel_float[2],mag_float[0],-mag_float[1],-mag_float[2]);
-			printAttitude(accel_float[0], accel_float[1], accel_float[2], -mag_float[1], -mag_float[0], mag_float[2]);
+			//printAttitude(accel_float[0], accel_float[1], accel_float[2], -mag_float[1], -mag_float[0], mag_float[2]);
 			//toEulerianAngle();
 			AHRS_flag = 0;
 		}

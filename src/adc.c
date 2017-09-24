@@ -40,8 +40,8 @@ void GPIOx_config() //       /to do -> add parameters for which gpio to config a
 	GPIOA->MODER |= GPIO_MODER_MODER3;
 	GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPDR3);
 	//ADC1_CH4 -> PA4
-	GPIOA->MODER |= GPIO_MODER_MODER4;
-	GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPDR4);
+	//GPIOA->MODER |= GPIO_MODER_MODER4;  ///////////
+	//GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPDR4); //////////
 	//ADC1_CH5 -> PA5
 	GPIOA->MODER |= GPIO_MODER_MODER5;
 	GPIOA->PUPDR &= ~(GPIO_PUPDR_PUPDR5);
@@ -122,7 +122,7 @@ void adc_config_multi() //       /to do -> add parameters for types of configura
 
 	// ------------Number of Conversions--------------
 	// 16 conversions
-	ADC1->SQR1 |= ADC_SQR1_L;
+	ADC1->SQR1 |= (ADC_SQR1_L_3 | ADC_SQR1_L_2 | ADC_SQR1_L_1 | ADC_SQR1_L_0);                       //ADC1->SQR1 |= ADC_SQR1_L; /////////////
 	//------------------------------------------------
 	// sampling time configuration (000) -> 3 cycles see page 423 manual 
 	ADC1->SMPR2 &= SMPR2_SMP3_RESET;
@@ -137,7 +137,7 @@ void adc_config_multi() //       /to do -> add parameters for types of configura
 	// 15 cycles CH3
 	ADC1->SMPR2 |= ADC_SMPR2_SMP3_0;
 	// 15 cycles CH4
-	ADC1->SMPR2 |= ADC_SMPR2_SMP4_0;
+	//ADC1->SMPR2 |= ADC_SMPR2_SMP4_0; //////////
 	//15 cycles CH5
 	ADC1->SMPR2 |= ADC_SMPR2_SMP5_0;
 	//15 cycles CH6
@@ -172,7 +172,7 @@ void adc_config_multi() //       /to do -> add parameters for types of configura
 	//CH3 fourth conversion
 	ADC1->SQR3 |= (ADC_SQR3_SQ4_1|ADC_SQR3_SQ4_0);
 	// CH4 fifth conversion
-	ADC1->SQR3 |= ADC_SQR3_SQ5_2;
+	ADC1->SQR3 |= (ADC_SQR3_SQ5_3|ADC_SQR3_SQ5_2|ADC_SQR3_SQ5_1|ADC_SQR3_SQ5_0);                                     //ADC1->SQR3 |= ADC_SQR3_SQ5_2; /////////
 	// CH5 sixth conversion
 	ADC1->SQR3 |= (ADC_SQR3_SQ6_2|ADC_SQR3_SQ6_0);
 	// CH6 seventh conversion
@@ -194,7 +194,7 @@ void adc_config_multi() //       /to do -> add parameters for types of configura
 	// CH14 fifteennth conversion
 	ADC1->SQR1 |= (ADC_SQR1_SQ15_3|ADC_SQR1_SQ15_2|ADC_SQR1_SQ15_1);
 	// CH15 sixteenth conversion
-	ADC1->SQR1 |= (ADC_SQR1_SQ16_3|ADC_SQR1_SQ16_2|ADC_SQR1_SQ16_1|ADC_SQR1_SQ16_0);
+	//ADC1->SQR1 |= (ADC_SQR1_SQ16_3|ADC_SQR1_SQ16_2|ADC_SQR1_SQ16_1|ADC_SQR1_SQ16_0); ///////////////
 	//------------------------------------------------------------------------------
 
 
