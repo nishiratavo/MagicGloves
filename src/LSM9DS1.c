@@ -152,18 +152,39 @@ void accel_gyro_calibrate(int32_t *aBiasRaw, int32_t *gBiasRaw)
 
 	for(ii = 0; ii < samples ; ii++) 
 	{	// Read the gyro data stored in the FIFO
-		gyro_read(gBiasRawTemp, gBiasRaw);
-		accel_read(aBiasRawTemp, aBiasRaw);
-		aBiasRawTemp[2] = aBiasRawTemp[2] - (int16_t)(1./SENSITIVITY_ACCELEROMETER_2); // Assumes sensor facing up!
+		//gyro_read(gBiasRawTemp, gBiasRaw);
+		uint8_t data[6];
+		I2C_Read_Many(I2C2, LSM9DS1_AG_ADDR , OUT_X_L_G|0x80, data, 6);
+		gBiasRawTemp[0] = (data[1]<<8) | data[0];
+		gBiasRawTemp[1] = (data[3]<<8) | data[2];
+		gBiasRawTemp[2] = (data[5]<<8) | data[4];
+
+		gBiasRaw[0] += (int32_t)gBiasRawTemp[0];
+		gBiasRaw[1] += (int32_t)gBiasRawTemp[1];
+		gBiasRaw[2] += (int32_t)gBiasRawTemp[2];
+		
+		//accel_read(aBiasRawTemp, aBiasRaw);
+		I2C_Read_Many(I2C2, LSM9DS1_AG_ADDR , OUT_X_L_XL|0x80, data, 6);
+		aBiasRawTemp[0] = (data[1]<<8) | data[0];
+		aBiasRawTemp[1] = (data[3]<<8) | data[2];
+		aBiasRawTemp[2] = (data[5]<<8) | data[4];
+
+		aBiasRaw[0] += (int32_t)aBiasRawTemp[0];
+		aBiasRaw[1] += (int32_t)aBiasRawTemp[1];
+		aBiasRaw[2] += (int32_t)aBiasRawTemp[2];
+
+		//aBiasRawTemp[2] = aBiasRawTemp[2] - (int16_t)(1./SENSITIVITY_ACCELEROMETER_2); // Assumes sensor facing up!
 	}  
 
 	for (ii = 0; ii < 3; ii++)
 	{
-		gBiasRaw[ii] = gBiasRawTemp[ii] / samples;
+		gBiasRaw[ii] = gBiasRaw[ii] / samples;
 		//gBias[ii] = gBiasRaw[ii]*SENSITIVITY_GYROSCOPE_245;
-		aBiasRaw[ii] = aBiasRawTemp[ii] / samples;
+		aBiasRaw[ii] = aBiasRaw[ii] / samples;
 		//aBias[ii] = aBiasRaw[ii]*SENSITIVITY_ACCELEROMETER_2;
 	}
+
+	aBiasRaw[2] = aBiasRaw[2] - (int16_t)(1./SENSITIVITY_ACCELEROMETER_2);
 
 	enable_FIFO(0);
 	set_FIFO(0,0x00);

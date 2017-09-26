@@ -28,6 +28,10 @@ void USART_config()
 	USART3->CR1 &= ~USART_CR1_M; // (0) for 8 data bits
 	USART3->CR1 &= ~USART_CR1_PCE; //  (0) for parity control disabled
 	USART3->CR1 |= USART_CR1_TE; // trasmitter mode enabled
+	//115200
+	//USART3->BRR |= 0xD;
+	//USART3->BRR |= 0x16<<4;
+	//9600
 	USART3->BRR |= 0x7; // fractional part of baud rate
 	USART3->BRR |= 0x111<<4; // mantissa of baud rate - baud rate = 9600
 	USART3->CR1 |= USART_CR1_UE; // enable USART

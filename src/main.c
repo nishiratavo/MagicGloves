@@ -33,42 +33,14 @@
 #define PI 3.1415
 #define DECLINATION 21.58
 
-#define LUT_SIZE 256
+#define LUT_SIZE 32
 #define DMA_I2S_BUFFER_SIZE 128
 
 
-static int16_t lut[] = {3750,3842,3934,4026,4118,4209,4300,4391,
-4482,4572,4661,4750,4839,4926,5013,5100,
-5185,5270,5353,5436,5518,5598,5678,5756,
-5833,5909,5984,6057,6129,6199,6268,6336,
-6402,6466,6529,6590,6649,6706,6762,6816,
-6868,6918,6966,7013,7057,7100,7140,7178,
-7215,7249,7281,7311,7339,7364,7388,7409,
-7428,7445,7459,7472,7482,7490,7495,7499,
-7500,7499,7495,7490,7482,7472,7459,7445,
-7428,7409,7388,7364,7339,7311,7281,7249,
-7215,7178,7140,7100,7057,7013,6966,6918,
-6868,6816,6762,6706,6649,6590,6529,6466,
-6402,6336,6268,6199,6129,6057,5984,5909,
-5833,5756,5678,5598,5518,5436,5353,5270,
-5185,5100,5013,4926,4839,4750,4661,4572,
-4482,4391,4300,4209,4118,4026,3934,3842,
-3750,3658,3566,3474,3382,3291,3200,3109,
-3018,2928,2839,2750,2661,2574,2487,2400,
-2315,2230,2147,2064,1982,1902,1822,1744,
-1667,1591,1516,1443,1371,1301,1232,1164,
-1098,1034,971,910,851,794,738,684,
-632,582,534,487,443,400,360,322,
-285,251,219,189,161,136,112,91,
-72,55,41,28,18,10,5,1,
-0,1,5,10,18,28,41,55,
-72,91,112,136,161,189,219,251,
-285,322,360,400,443,487,534,582,
-632,684,738,794,851,910,971,1034,
-1098,1164,1232,1301,1371,1443,1516,1591,
-1667,1744,1822,1902,1982,2064,2147,2230,
-2315,2400,2487,2574,2661,2750,2839,2928,
-3018,3109,3200,3291,3382,3474,3566,3658};
+static int16_t lut[] = {3750,4482,5185,5833,6402,6868,7215,7428,
+7500,7428,7215,6868,6402,5833,5185,4482,
+3750,3018,2315,1667,1098,632,285,72,
+0,72,285,632,1098,1667,2315,3018};
 
 static volatile uint16_t DMAI2SBuffer0[128] __attribute__ ((aligned (4)));
 static volatile uint16_t DMAI2SBuffer1[128] __attribute__ ((aligned (4)));
@@ -112,6 +84,9 @@ i2c_address i2c_buffer[32];
 uint32_t i = 0;
 uint32_t j = 0;
 
+volatile float yaw_filtered = 0;
+volatile float roll_filtered = 0;
+volatile float pitch_filtered = 0;
 
 void DMA2_Stream0_IRQHandler()
 {
@@ -318,7 +293,7 @@ int main(void)
 	DMA1_Stream5 -> M1AR |= (uint32_t)DMAI2SBuffer1;
 	DMA_I2S_config2();
 	//I2C_test = I2C_Read(I2C1, LSM9DS1_AG_ADDR, 0x0F);
-	//USARTclock_config();
+	USARTclock_config();
 	I2C_clock_init();
 	I2C_gpio_config();
 	I2C_config(I2C2);
@@ -326,8 +301,8 @@ int main(void)
 	NVIC_EnableIRQ(I2C2_EV_IRQn);
 	LSM9DS1_init();
 	accel_gyro_calibrate(aBias, gBias);
-	//GPIO_config();
-	//USART_config();
+	GPIO_config();
+	USART_config();
 	
 	NVIC_SetPriority(ADC_IRQn, 2);
 	NVIC_EnableIRQ(ADC_IRQn);
@@ -423,8 +398,11 @@ int main(void)
 		}*/
 		if (AHRS_flag == 1)
 		{
-			//MadgwickAHRSupdate(-gyro_float[0], -gyro_float[1], -gyro_float[2], accel_float[0], accel_float[1], accel_float[2],mag_float[0],-mag_float[1],-mag_float[2]);
+			//MadgwickAHRSupdate(gyro_float[0]*PI/180.0f, gyro_float[1]*PI/180.0f, gyro_float[2]*PI/180.0f, accel_float[0], accel_float[1], accel_float[2], -mag_float[1], -mag_float[0], mag_float[2]);
 			//printAttitude(accel_float[0], accel_float[1], accel_float[2], -mag_float[1], -mag_float[0], mag_float[2]);
+			//yaw_filtered = yaw_filtered + ((yaw - yaw_filtered)*0.0625);
+			//roll_filtered = roll_filtered + ((roll - roll_filtered)*0.0625);
+			//pitch_filtered = pitch_filtered + ((pitch - pitch_filtered)*0.0625);
 			//toEulerianAngle();
 			AHRS_flag = 0;
 		}
@@ -457,19 +435,19 @@ int main(void)
 
 		/*send_data('x');
 		send_data(' ');
-		print_float(roll);
+		print_float(roll_filtered);
 		//print_data((int32_t)accel_data[0]);
 		send_data(' ');
 		send_data('y');
 		send_data(' ');
-		print_float(yaw);
+		print_float(pitch_filtered);
 		//print_data((int32_t)accel_data[1]);
 		send_data(' ');
 		send_data('z');
 		send_data(' ');
-		print_float(pitch);
+		print_float(yaw_filtered);
 		//print_data((int32_t)accel_data[2]);
-		send_data(' ');
+		/*send_data(' ');
 		send_data('x');
 		send_data(' ');
 		print_float(gyro_float[0]);
@@ -482,24 +460,24 @@ int main(void)
 		send_data(' ');
 		send_data('z');
 		send_data(' ');
-		print_float(gyro_float[2]);*/
+		print_float(gyro_float[2]);
 		//print_data((int32_t)gyro_data[2]);
 
-		/*send_data(' ');
+		send_data(' ');
 		send_data('x');
 		send_data(' ');
-		//print_float(gyro_float[0]);
 		print_float(mag_float[0]);
+		//print_data((int32_t)mag_data[0]);
 		send_data(' ');
 		send_data('y');
 		send_data(' ');
-		//print_float(gyro_float[1]);
 		print_float(mag_float[1]);
+		//print_data((int32_t)mag_data[1]);
 		send_data(' ');
 		send_data('z');
 		send_data(' ');
-		//print_float(gyro_float[2]);
-		print_float(mag_float[2]);*/
+		print_float(mag_float[2]);
+		//print_data((int32_t)mag_data[2]);
 		/*send_data(' ');
 		send_data('0');
 		send_data(' ');
