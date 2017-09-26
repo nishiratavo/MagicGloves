@@ -398,12 +398,12 @@ int main(void)
 		}*/
 		if (AHRS_flag == 1)
 		{
-			//MadgwickAHRSupdate(gyro_float[0]*PI/180.0f, gyro_float[1]*PI/180.0f, gyro_float[2]*PI/180.0f, accel_float[0], accel_float[1], accel_float[2], -mag_float[1], -mag_float[0], mag_float[2]);
+			MadgwickAHRSupdate(gyro_float[0]*PI/180.0f, gyro_float[1]*PI/180.0f, gyro_float[2]*PI/180.0f, accel_float[0], accel_float[1], accel_float[2], -mag_float[1], -mag_float[0], mag_float[2]);
 			//printAttitude(accel_float[0], accel_float[1], accel_float[2], -mag_float[1], -mag_float[0], mag_float[2]);
-			//yaw_filtered = yaw_filtered + ((yaw - yaw_filtered)*0.0625);
-			//roll_filtered = roll_filtered + ((roll - roll_filtered)*0.0625);
-			//pitch_filtered = pitch_filtered + ((pitch - pitch_filtered)*0.0625);
-			//toEulerianAngle();
+			yaw_filtered = yaw_filtered + ((yaw - yaw_filtered)*0.0625);
+			roll_filtered = roll_filtered + ((roll - roll_filtered)*0.0625);
+			pitch_filtered = pitch_filtered + ((pitch - pitch_filtered)*0.0625);
+			toEulerianAngle();
 			AHRS_flag = 0;
 		}
 		//MadgwickAHRSupdateIMU(gyro_float[0], gyro_float[1], gyro_float[2], accel_float[0], accel_float[1], accel_float[2]);
