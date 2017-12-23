@@ -16,7 +16,7 @@ DBGFLAGS   = -Og
 LDSCRIPT   = stm32f407vgtx.ld
 CFLAGS     = -g3 -Wall -mcpu=cortex-m4 -mtune=cortex-M4 -mlittle-endian -mfloat-abi=hard -mfpu=fpv4-sp-d16  -mthumb -D ARM_MATH_CM4 -I inc/ -D $(DEVICE)
 ASFLAGS    =  $(CFLAGS)
-LDFLAGS    = -T $(LDSCRIPT) -Wl,--gc-sections --specs=nano.specs -u _printf_float --specs=nosys.specs
+LDFLAGS    = -T $(LDSCRIPT) -Wl,--gc-sections --specs=nano.specs -u _printf_float  --specs=rdimon.specs
 
 .PHONY: all debug burn clean config rst fast fastd libs
 

@@ -6,6 +6,7 @@
 #include "I2C.h"
 #include "LSM9DS1.h"
 #include "LSM9DS1_Registers.h"
+#include "BNO055.h"
 #include "stdio.h"
 #include "circular_buffer.h"
 #include "clockconfig.h"
@@ -24,7 +25,7 @@
 
 			// circular buffer for ADC data
 			
-
+#define BNO055_ADDRESS_A 0x28
 #define LSM9DS1_AG_ADDR  0x6B
 #define LSM9DS1_M_ADDR  0x1E
 #define SENSITIVITY_ACCELEROMETER_2  (float)0.000061
@@ -60,6 +61,7 @@ static volatile uint16_t DMAI2SBuffer1[128] __attribute__ ((aligned (4)));
 volatile uint8_t DMA_I2S_buffer_flag = 0;
 volatile uint8_t wait_read = 0;
 
+
 int8_t adc_counter = 0;
 uint16_t result = 0;
 char data = 'b';
@@ -71,18 +73,13 @@ volatile int32_t output_data[] = {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
 volatile int16_t buffer[16];
 volatile int32_t flex_data[] = {0x0, 0x0, 0x0, 0x0};
 volatile int count = 0;
-uint8_t I2C_test = 0;
-volatile int16_t accel_data[] = {0x0, 0x0, 0x0};
-volatile int16_t gyro_data[] = {0x0, 0x0, 0x0};
-volatile int16_t mag_data[] = {0x0, 0x0, 0x0};
-uint8_t accel_test[] = {0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
-uint8_t gyro_test[] = {0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
-uint8_t mag_test[] = {0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
+
+volatile int16_t imu_data[] = {0x0, 0x0, 0x0};
+uint8_t imu_test[] = {0x0, 0x0, 0x1, 0x1, 0x1, 0x1};
 volatile int16_t dummy = 0;
 volatile uint8_t systick_flag = 0;
-volatile float accel_float[3];
-volatile float gyro_float[3];
-volatile float mag_float[3];
+
+volatile float imu_float[3];
 int32_t aBias[] = {0, 0, 0};
 int32_t gBias[] = {0, 0, 0};
 volatile uint8_t AHRS_flag = 0;
@@ -97,9 +94,8 @@ uint32_t i = 0;
 uint32_t j = 0;
 volatile uint32_t step = 1;
 
-volatile float yaw_filtered = 0;
-volatile float roll_filtered = 0;
-volatile float pitch_filtered = 0;
+volatile uint8_t delay_var = 0;
+volatile uint8_t delay_time = 0;
 
 void DMA2_Stream0_IRQHandler()
 {
@@ -139,6 +135,10 @@ void SysTick_Handler()
 	if (AHRS_flag == 0)
 	{
 		AHRS_flag = 1;
+	}
+	if (delay_var == 1)
+	{
+		delay_time++;
 	}
 }
 
@@ -287,36 +287,52 @@ void printAttitude(float ax, float ay, float az, float mx, float my, float mz)
 }
 
 
+void delay(time)
+{
+	delay_var = 1;
+	while(delay_time < time/10);
+	delay_var = 0;
+	delay_time = 0;
 
+}
+
+void bno055_init()
+{
+	I2C_Write(I2C2, BNO055_ADDRESS_A, BNO055_SYS_TRIGGER_ADDR, 0x20); // reset
+	delay(700);
+	I2C_Write(I2C2, BNO055_ADDRESS_A, BNO055_PWR_MODE_ADDR, POWER_MODE_NORMAL); // set to normal power mode
+	delay(30);
+	I2C_Write(I2C2, BNO055_ADDRESS_A, BNO055_SYS_TRIGGER_ADDR, 0x80); // set to use external crystal
+	delay(10);
+	I2C_Write(I2C2, BNO055_ADDRESS_A, BNO055_OPR_MODE_ADDR, OPERATION_MODE_NDOF); // set to NDOF mode 
+	delay(30);
+}
 
 
 
 int main(void)
 {
 	ClockConfig();
-	cs43l22_init();
-	cs43l22_ctrl_config();
-	I2C_Write(I2C1, CODEC_I2C_ADDRESS, CODEC_MAP_PWR_CTRL1, 0x9E);
-	I2C_test = I2C_Read(I2C1, CODEC_I2C_ADDRESS, CODEC_MAP_PLAYBACK_CTRL1);
-	i2s_init();
+	//cs43l22_init();
+	//cs43l22_ctrl_config();
+	//I2C_Write(I2C1, CODEC_I2C_ADDRESS, CODEC_MAP_PWR_CTRL1, 0x9E);
+	//I2C_test = I2C_Read(I2C1, CODEC_I2C_ADDRESS, CODEC_MAP_PLAYBACK_CTRL1);
+	/*i2s_init();
 	NVIC_SetPriority(DMA1_Stream5_IRQn, 1);
 	NVIC_EnableIRQ(DMA1_Stream5_IRQn);
 	DMA_I2S_config();
 	DMA1_Stream5 -> M0AR |= (uint32_t)DMAI2SBuffer0;
 	DMA1_Stream5 -> M1AR |= (uint32_t)DMAI2SBuffer1;
-	DMA_I2S_config2();
-	//I2C_test = I2C_Read(I2C1, LSM9DS1_AG_ADDR, 0x0F);
-	//USARTclock_config();
-	//I2C_clock_init();
-	//I2C_gpio_config();
-	//I2C_config(I2C2);
-	//NVIC_SetPriority(I2C2_EV_IRQn, 1);
-	//NVIC_EnableIRQ(I2C2_EV_IRQn);
-	//LSM9DS1_init();
-	//accel_gyro_calibrate(aBias, gBias);
-	//GPIO_config();
-	//USART_config();
+	DMA_I2S_config2();*/
 	
+	USARTclock_config();
+	I2C_clock_init();
+	I2C_gpio_config();
+	I2C_config(I2C2);
+	NVIC_SetPriority(I2C2_EV_IRQn, 1);
+	NVIC_EnableIRQ(I2C2_EV_IRQn);
+	GPIO_config();
+	USART_config();
 	NVIC_SetPriority(ADC_IRQn, 2);
 	NVIC_EnableIRQ(ADC_IRQn);
 	ADCclock_config();
@@ -329,6 +345,7 @@ int main(void)
 	adc_config_multi();
 	(void)SysTick_Config(0x19A280); //334500 0x19A280
 	NVIC_SetPriority(SysTick_IRQn, 3);
+	bno055_init();
 	I2C2->CR2 |= (I2C_CR2_ITEVTEN|I2C_CR2_ITBUFEN);
 
 
@@ -378,61 +395,16 @@ int main(void)
 				j = 0 ;
 			}
 		}
-		//I2C_test = I2C_Read(I2C1, LSM9DS1_AG_ADDR, 0x0F);
 		
-	
-		//dummy = DWT->CYCCNT;
-		//I2C_test = I2C_Read(I2C2, LSM9DS1_AG_ADDR, 0x20);
-		//I2C_Read_IT(I2C2, LSM9DS1_AG_ADDR, 0x0F, accel_test);
-		//i2c_read_it(I2C2,LSM9DS1_AG_ADDR, OUT_X_L_XL|0x80, 6, accel_test);
-		/*i2c_read_it(I2C2,LSM9DS1_AG_ADDR, OUT_X_L_G|0x80, 6, gyro_test);
-		gyro_data[0] = (gyro_test[1]<<8) | gyro_test[0];
-		gyro_data[1] = (gyro_test[3]<<8) | gyro_test[2];
-		gyro_data[2] = (gyro_test[5]<<8) | gyro_test[4];
+		i2c_read_it(I2C2,BNO055_ADDRESS_A, 0x1A, 6, imu_test);
+		imu_data[0] = (imu_test[1]<<8) | imu_test[0];
+		imu_data[1] = (imu_test[3]<<8) | imu_test[2];
+		imu_data[2] = (imu_test[5]<<8) | imu_test[4];
 
-		gyro_float[0] = (float)SENSITIVITY_GYROSCOPE_245*(gyro_data[0] - gBias[0]);
-		gyro_float[1] = (float)SENSITIVITY_GYROSCOPE_245*(gyro_data[1] - gBias[1]);
-		gyro_float[2] = (float)SENSITIVITY_GYROSCOPE_245*(gyro_data[2] - gBias[2]);
-
-		i2c_read_it(I2C2,LSM9DS1_AG_ADDR, OUT_X_L_XL|0x80, 6, accel_test);
-		accel_data[0] = (accel_test[1]<<8) | accel_test[0];
-		accel_data[1] = (accel_test[3]<<8) | accel_test[2];
-		accel_data[2] = (accel_test[5]<<8) | accel_test[4];
-
-		accel_float[0] = (float)SENSITIVITY_ACCELEROMETER_2*(accel_data[0] - aBias[0]);
-		accel_float[1] = (float)SENSITIVITY_ACCELEROMETER_2*(accel_data[1] - aBias[1]);
-		accel_float[2] = (float)SENSITIVITY_ACCELEROMETER_2*(accel_data[2] - aBias[2]);
-
-		i2c_read_it(I2C2,LSM9DS1_M_ADDR, OUT_X_L_M|0x80, 6, mag_test);
-		mag_data[0] = (mag_test[1]<<8) | mag_test[0];
-		mag_data[1] = (mag_test[3]<<8) | mag_test[2];
-		mag_data[2] = (mag_test[5]<<8) | mag_test[4];
-
-		mag_float[0] = (float)SENSITIVITY_MAGNETOMETER_4*mag_data[0];
-		mag_float[1] = (float)SENSITIVITY_MAGNETOMETER_4*mag_data[1];
-		mag_float[2] = (float)SENSITIVITY_MAGNETOMETER_4*mag_data[2];*/
-
-		//i2c_read_it(I2C2,LSM9DS1_M_ADDR, 0x0F, 0, &I2C_test);
-		/*if (accel_available())
-		{
-			count++;
-			accel_g(accel_float, aBias);
-			//accel_read(accel_data, aBias);
-		}
-		if (gyro_available())
-		{
-			gyro_dps(gyro_float, gBias);
-		}*/
-		/*if (AHRS_flag == 1)
-		{
-			MadgwickAHRSupdate(gyro_float[0]*PI/180.0f, gyro_float[1]*PI/180.0f, gyro_float[2]*PI/180.0f, accel_float[0], accel_float[1], accel_float[2], -mag_float[1], -mag_float[0], mag_float[2]);
-			//printAttitude(accel_float[0], accel_float[1], accel_float[2], -mag_float[1], -mag_float[0], mag_float[2]);
-			yaw_filtered = yaw_filtered + ((yaw - yaw_filtered)*0.0625);
-			roll_filtered = roll_filtered + ((roll - roll_filtered)*0.0625);
-			pitch_filtered = pitch_filtered + ((pitch - pitch_filtered)*0.0625);
-			toEulerianAngle();
-			AHRS_flag = 0;
-		}*/
+  		imu_float[0] = ((float)imu_data[0])/16.0;
+		imu_float[1] = ((float)imu_data[1])/16.0;
+		imu_float[2] = ((float)imu_data[2])/16.0;
+		
 		// change this stuff to a function 
 		filtered_flex[0] = filtered_flex[0] + ((buffer[0] - filtered_flex[0])>>4);
 		output_data[0] = output_data[0] + ((filtered_flex[0] - output_data[0])>>4);
@@ -458,43 +430,45 @@ int main(void)
 		filtered_flex[7] = filtered_flex[7] + ((buffer[7] - filtered_flex[7])>>4);
 		output_data[7] = output_data[7] + ((filtered_flex[7] - output_data[7])>>4);
 
-		if (filtered_flex[1] < 1700)
+		if ((filtered_flex[1] < 2000) && (filtered_flex[3] < 2000) && (filtered_flex[5] < 2000))
 		{
 			step = 1;
 		}
-		else if ((filtered_flex[1] > 1700) && (filtered_flex[1] < 2000))
+		else if ((filtered_flex[1] > 2000) && (filtered_flex[3] < 2000) && (filtered_flex[5] < 2000))
 		{
 			step = 2;
 		}
-		else if ((filtered_flex[1] > 2000) && (filtered_flex[1] < 2200))
+		else if ((filtered_flex[3] > 2000) && (filtered_flex[1] < 2000) && (filtered_flex[5] < 2000))
 		{
 			step = 3;
 		}
-		/*else if ((filtered_flex[1] > 2100) && (filtered_flex[1] < 2200))
-		{
-			step = 4;
-		}*/
-		else if ((filtered_flex[1] > 2200))
+		else if ((filtered_flex[5] > 2000) && (filtered_flex[1] < 2000) && (filtered_flex[3] < 2000))
 		{
 			step = 4;
 		}
 
 
 
-		/*send_data('x');
+		send_data('x');
 		send_data(' ');
-		//print_float(roll_filtered);
+		print_float(imu_float[0]);
+		//send_data('\n');
+		//send_data('\r');
 		//print_data((int32_t)filtered_flex[1]);
 		send_data(' ');
 		send_data('y');
 		send_data(' ');
-		print_float(pitch_filtered);
+		print_float(imu_float[1]);
+		//send_data('\n');
+		//send_data('\r');
 		//print_data((int32_t)accel_data[1]);
 		send_data(' ');
 		send_data('z');
 		send_data(' ');
-		print_float(yaw_filtered);*/
+		print_float(imu_float[2]);
 		//print_data((int32_t)accel_data[2]);
+
+
 		/*send_data(' ');
 		send_data('x');
 		send_data(' ');
@@ -526,40 +500,49 @@ int main(void)
 		send_data(' ');
 		print_float(mag_float[2]);
 		//print_data((int32_t)mag_data[2]);
-		/*send_data(' ');
-		send_data('0');
+		send_data(' ');*/
+
+		/*send_data('c');
 		send_data(' ');
-		print_data(output_data[0]);
+		print_data(filtered_flex[0]);
+		send_data('\n');
+		send_data('\r');
 		send_data(' ');
-		send_data('1');
+		send_data('d');
 		send_data(' ');
-		print_data(output_data[1]);
+		print_data(filtered_flex[1]);
+		send_data('\n');
+		send_data('\r');
 		send_data(' ');
 		send_data('2');
 		send_data(' ');
-		print_data(output_data[2]);
+		print_data(filtered_flex[2]);
 		send_data(' ');
-		send_data('3');
+		send_data('e');
 		send_data(' ');
-		print_data(output_data[3]);
+		print_data(filtered_flex[3]);
+		send_data('\n');
+		send_data('\r');
 		send_data(' ');
 		send_data('4');
+		send_data(' ')
+		print_data(filtered_flex[4]);
 		send_data(' ');
-		print_data(output_data[4]);
+		send_data('f');
 		send_data(' ');
-		send_data('5');
-		send_data(' ');
-		print_data(output_data[5]);
+		print_data(filtered_flex[6]);
+		send_data('\n');
+		send_data('\r');
 		send_data(' ');
 		send_data('6');
 		send_data(' ');
-		print_data(output_data[6]);
+		print_data(filtered_flex[6]);
 		send_data(' ');
-		send_data('7');
+		send_data('g');
 		send_data(' ');
-		print_data(output_data[7]);*/
-		//send_data('\n');
-		//send_data('\r');
+		print_data(filtered_flex[8]);*/
+		send_data('\n');
+		send_data('\r');
 		count++;
 		//count = DWT->CYCCNT;
 		//-----------------------------
