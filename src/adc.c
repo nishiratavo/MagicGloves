@@ -171,16 +171,16 @@ void adc_config_multi() //       /to do -> add parameters for types of configura
 	ADC1->SQR3 |= ADC_SQR3_SQ3_1;
 	//CH3 fourth conversion
 	ADC1->SQR3 |= (ADC_SQR3_SQ4_1|ADC_SQR3_SQ4_0);
-	// CH4 fifth conversion
-	ADC1->SQR3 |= (ADC_SQR3_SQ5_3|ADC_SQR3_SQ5_2|ADC_SQR3_SQ5_1|ADC_SQR3_SQ5_0);                                     //ADC1->SQR3 |= ADC_SQR3_SQ5_2; /////////
-	// CH5 sixth conversion
-	ADC1->SQR3 |= (ADC_SQR3_SQ6_2|ADC_SQR3_SQ6_0);
-	// CH6 seventh conversion
-	ADC1->SQR2 |= (ADC_SQR2_SQ7_2|ADC_SQR2_SQ7_1);
-	//CH7 eighth conversion
-	ADC1->SQR2 |= (ADC_SQR2_SQ8_2|ADC_SQR2_SQ8_1|ADC_SQR2_SQ8_0);
-	// CH8 ninth conversion
-	ADC1->SQR2 |= ADC_SQR2_SQ9_3;
+	// CH5 fifth conversion
+	ADC1->SQR3 |= (ADC_SQR3_SQ5_2|ADC_SQR3_SQ5_0);    //(ADC_SQR3_SQ5_3|ADC_SQR3_SQ5_2|ADC_SQR3_SQ5_1|ADC_SQR3_SQ5_0);                                     //ADC1->SQR3 |= ADC_SQR3_SQ5_2; /////////
+	// CH6 sixth conversion
+	ADC1->SQR3 |= (ADC_SQR3_SQ6_2|ADC_SQR3_SQ6_1);
+	// CH7 seventh conversion
+	ADC1->SQR2 |= (ADC_SQR2_SQ7_2|ADC_SQR2_SQ7_1|ADC_SQR2_SQ7_0);
+	//CH8 eighth conversion
+	ADC1->SQR2 |= (ADC_SQR2_SQ8_3);
+	// CH15 ninth conversion
+	ADC1->SQR2 |= (ADC_SQR2_SQ9_3|ADC_SQR2_SQ9_2|ADC_SQR2_SQ9_1|ADC_SQR2_SQ9_0);
 	// CH9 tenth conversion
 	ADC1->SQR2 |= (ADC_SQR2_SQ10_3|ADC_SQR2_SQ10_0);
 	// CH10 eleventh conversion

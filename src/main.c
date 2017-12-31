@@ -71,7 +71,6 @@ uint8_t i2c_data_counter = 0;
 volatile int32_t filtered_flex[] = {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
 volatile int32_t output_data[] = {0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0};
 volatile int16_t buffer[16];
-volatile int32_t flex_data[] = {0x0, 0x0, 0x0, 0x0};
 volatile int count = 0;
 
 volatile int16_t imu_data[] = {0x0, 0x0, 0x0};
@@ -287,7 +286,7 @@ void printAttitude(float ax, float ay, float az, float mx, float my, float mz)
 }
 
 
-void delay(time)
+void delay(int time)
 {
 	delay_var = 1;
 	while(delay_time < time/10);
@@ -351,7 +350,7 @@ int main(void)
 
 	for(;;)
 	{
-		if (DMA_I2S_buffer_flag == 0 && wait_read == 0)
+		/*if (DMA_I2S_buffer_flag == 0 && wait_read == 0)
 		{
 			if (j*step >= 128)
 			{
@@ -393,8 +392,7 @@ int main(void)
 			if (j*step >= LUT_SIZE)
 			{
 				j = 0 ;
-			}
-		}
+		*/
 		
 		i2c_read_it(I2C2,BNO055_ADDRESS_A, 0x1A, 6, imu_test);
 		imu_data[0] = (imu_test[1]<<8) | imu_test[0];
@@ -430,26 +428,10 @@ int main(void)
 		filtered_flex[7] = filtered_flex[7] + ((buffer[7] - filtered_flex[7])>>4);
 		output_data[7] = output_data[7] + ((filtered_flex[7] - output_data[7])>>4);
 
-		if ((filtered_flex[1] < 2000) && (filtered_flex[3] < 2000) && (filtered_flex[5] < 2000))
-		{
-			step = 1;
-		}
-		else if ((filtered_flex[1] > 2000) && (filtered_flex[3] < 2000) && (filtered_flex[5] < 2000))
-		{
-			step = 2;
-		}
-		else if ((filtered_flex[3] > 2000) && (filtered_flex[1] < 2000) && (filtered_flex[5] < 2000))
-		{
-			step = 3;
-		}
-		else if ((filtered_flex[5] > 2000) && (filtered_flex[1] < 2000) && (filtered_flex[3] < 2000))
-		{
-			step = 4;
-		}
 
 
 
-		send_data('x');
+		/*send_data('x');
 		send_data(' ');
 		print_float(imu_float[0]);
 		//send_data('\n');
@@ -465,7 +447,9 @@ int main(void)
 		send_data(' ');
 		send_data('z');
 		send_data(' ');
-		print_float(imu_float[2]);
+		print_float(imu_float[2]);*/
+		//send_data('\n');
+		//send_data('\r');
 		//print_data((int32_t)accel_data[2]);
 
 
@@ -502,45 +486,51 @@ int main(void)
 		//print_data((int32_t)mag_data[2]);
 		send_data(' ');*/
 
-		/*send_data('c');
+		send_data('a');
 		send_data(' ');
 		print_data(filtered_flex[0]);
-		send_data('\n');
-		send_data('\r');
+		//send_data('\n');
+		//send_data('\r');
+		send_data(' ');
+		send_data('b');
+		send_data(' ');
+		print_data(filtered_flex[1]);
+		//send_data('\n');
+		//send_data('\r');
+		send_data(' ');
+		send_data('c');
+		send_data(' ');
+		print_data(filtered_flex[2]);
+		//send_data('\n');
+		//send_data('\r');
 		send_data(' ');
 		send_data('d');
 		send_data(' ');
-		print_data(filtered_flex[1]);
-		send_data('\n');
-		send_data('\r');
-		send_data(' ');
-		send_data('2');
-		send_data(' ');
-		print_data(filtered_flex[2]);
+		print_data(filtered_flex[3]);
+		//send_data('\n');
+		//send_data('\r');
 		send_data(' ');
 		send_data('e');
 		send_data(' ');
-		print_data(filtered_flex[3]);
-		send_data('\n');
-		send_data('\r');
-		send_data(' ');
-		send_data('4');
-		send_data(' ')
 		print_data(filtered_flex[4]);
+		//send_data('\n');
+		//send_data('\r');
 		send_data(' ');
 		send_data('f');
 		send_data(' ');
-		print_data(filtered_flex[6]);
-		send_data('\n');
-		send_data('\r');
-		send_data(' ');
-		send_data('6');
-		send_data(' ');
-		print_data(filtered_flex[6]);
+		print_data(filtered_flex[5]);
+		//send_data('\n');
+		//send_data('\r');
 		send_data(' ');
 		send_data('g');
 		send_data(' ');
-		print_data(filtered_flex[8]);*/
+		print_data(filtered_flex[6]);
+		//send_data('\n');
+		//send_data('\r');
+		send_data(' ');
+		send_data('h');
+		send_data(' ');
+		print_data(filtered_flex[7]);
 		send_data('\n');
 		send_data('\r');
 		count++;
