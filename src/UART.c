@@ -32,8 +32,8 @@ void USART_config()
 	//USART3->BRR |= 0xD;
 	//USART3->BRR |= 0x16<<4;
 	//9600
-	USART3->BRR |= 0x7; // fractional part of baud rate
-	USART3->BRR |= 0x111<<4; // mantissa of baud rate - baud rate = 9600
+	USART3->BRR |= 0x9; // fractional part of baud rate
+	USART3->BRR |= 0x2D<<4; // mantissa of baud rate - baud rate = 9600 / test value = 57600
 	USART3->CR1 |= USART_CR1_UE; // enable USART
 
 }
